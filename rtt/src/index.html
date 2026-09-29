@@ -503,7 +503,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.data
   try {
     [ME, TASKS, EMPS] = await Promise.all([api('me'), api('tasks'), api('employees')]);
     TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
-    $('#me').innerHTML = `${esc(ME.name)}${ME.isAdmin ? ' (admin)' : ''} <a href="/.auth/logout">Sign out</a>`;
+    $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
     freshForm(); await loadToday(); go('log');
   } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 })();
