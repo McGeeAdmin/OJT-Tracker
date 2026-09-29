@@ -332,7 +332,7 @@ async function submit(keep) {
 }
 
 /* ---------- VIEW SUBMISSIONS ---------- */
-let vmode = 'Team Member', scope = 'all', sel = null, q = '', open = null, PROG = null, editing = false;
+let vmode = 'Team Member', scope = 'mine', sel = null, q = '', open = null, PROG = null, editing = false;
 async function loadProg() {
   const rows = await api('progress'); PROG = {};
   rows.forEach(r => { (PROG[r.eid] = PROG[r.eid] || { _t: 0 })[r.task] = r.n; PROG[r.eid]._t += r.n; });
