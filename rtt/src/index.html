@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#E6E9EC; --panel:#FFFFFF; --ink:#17232F; --muted:#56636F; --line:#CBD1D7; --soft:#F2F4F6;
-  --sign:#FFC72C; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --ok:#2A7F52; --danger:#B3261E;
+  --sign:#FFFFFF; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --ok:#2A7F52; --danger:#B3261E;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --hdr:#0B3D6E; --hdrtext:#FFFFFF;
@@ -22,7 +22,9 @@
 :root[data-theme="dark"]{--bg:#1A2129; --panel:#232C36; --ink:#E7EBEF; --muted:#9AA6B2; --line:#39444F; --soft:#2B3540;
   --arr:#6FA3E0; --dep:#5EC08C; --ok:#5EC08C; --danger:#F2867E;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*,*::before,*::after{box-sizing:inherit}
+*,*::before,*::after{box-sizing:border-box}
+.grid>*{min-width:0}
+.filters .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body)}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--sign);outline-offset:2px}
