@@ -25,7 +25,7 @@ app.http('entries', {
       r.input('top', sql.Int, top);
       const res = await r.query(`
         SELECT TOP (@top) t.Id AS id, t.EntryGroupId AS grp, CONVERT(char(5), t.CreatedAt, 108) AS timeUtc, CONVERT(char(10), t.LogDate, 23) AS date, t.EmployeeId AS eid,
-               e.FirstName + ' ' + e.LastName AS trainee, t.TaskCode AS task, t.Phase AS io, t.Week AS week,
+               e.FirstName + ' ' + e.LastName AS trainee, t.TaskCode AS task, RTRIM(t.Phase) AS io, t.Week AS week,
                t.Gate AS gate, t.Flight AS flight, t.Tail AS tail, t.Notes AS notes,
                t.TrainerName AS trainer, t.TrainerEmail AS trainerEmail
         FROM dbo.TaskLog t JOIN dbo.Employees e ON e.EmployeeId = t.EmployeeId
