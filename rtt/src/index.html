@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SEA Team Member Tracker</title>
+<title>SEA Training Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,6 @@
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --hdr:#0B3D6E; --hdrtext:#FFFFFF;
-  --bg:#E6E9EC; --panel:#FFFFFF;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -358,7 +357,7 @@ async function vView() {
   try { if (vmode !== 'list') { await reloadEmps(); if (!PROG) await loadProg(); } }
   catch (e) { if ($('#tv')) $('#tv').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   if (!$('#tv')) return;
-  ({ Team Member: oneView, grid: grid, list: vList })[vmode]();
+  ({ 'Team Member': oneView, grid: grid, list: vList })[vmode]();
 }
 
 /* By Team Member */
@@ -462,7 +461,7 @@ async function loadHist() {
     const hdr = g.date !== lastDate ? `<h3 class="day">${dayLabel(g.date)}</h3>` : ''; lastDate = g.date;
     const canDel = ME.isAdmin || g.trainerEmail.toLowerCase() === ME.email;
     return `${hdr}<article class="sub-card ${g.io}">
-      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.Team Member)}</button> <small>${esc(g.eid)}</small></div>
+      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small></div>
         <span class="pill ${g.io}">${g.io === 'IN' ? 'Arrival' : 'Departure'}</span></div>
       <div class="sc-flight">Gate <b>${esc(g.gate)}</b> &nbsp; Flight <b>${esc(g.flight) || '—'}</b> &nbsp; Tail <b>${esc(g.tail) || '—'}</b> &nbsp; Week <b>${g.week}</b></div>
       <div class="sc-tasks">${g.tasks.map(t => `<span class="tag">${esc(TMAP[t] ? TMAP[t].label : t)}</span>`).join('')}</div>
@@ -475,7 +474,7 @@ async function loadHist() {
   app.querySelectorAll('[data-open-emp]').forEach(b => b.onclick = () => { sel = b.dataset.openEmp; open = null; vmode = 'Team Member'; vView(); });
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const g = byG[b.dataset.del];
-    if (!confirm(`Delete this submission for ${g.Team Member} (${g.tasks.length} task${g.tasks.length > 1 ? 's' : ''}, flight ${g.flight || g.tail}, ${fmtD(g.date)})?`)) return;
+    if (!confirm(`Delete this submission for ${g.trainee} (${g.tasks.length} task${g.tasks.length > 1 ? 's' : ''}, flight ${g.flight || g.tail}, ${fmtD(g.date)})?`)) return;
     try { await api('submissions/' + g.grp, { method: 'DELETE' }); delete SUM[g.eid]; PROG = null; toast('Deleted submission'); loadHist(); } catch (e) { fail(e); }
   });
 }
@@ -489,10 +488,10 @@ function dayLabel(d) {
 function downloadCsv() {
   const h = ['Date', 'EmployeeID', 'Team Member', 'Task', 'Phase', 'Gate', 'Flight', 'Tail', 'Week', 'Trainer', 'Notes'];
   const qv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const csv = [h.join(',')].concat(HD.rows.map(r => [r.date, r.eid, r.Team Member, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
+  const csv = [h.join(',')].concat(HD.rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
-  a.download = 'Team Member-submissions-' + today() + '.csv'; a.click();
+  a.download = 'training-submissions-' + today() + '.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
