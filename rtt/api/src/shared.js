@@ -11,13 +11,17 @@ const dbConfig = {
 };
 
 let poolPromise = null;
-function db() {
-  if (!poolPromise) {
-    poolPromise = new sql.ConnectionPool(dbConfig)
-      .connect()
-      .catch(err => { poolPromise = null; throw err; });
+async function db() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      if (!poolPromise) poolPromise = new sql.ConnectionPool(dbConfig).connect();
+      return await poolPromise;
+    } catch (err) {
+      poolPromise = null;
+      if (attempt >= 3) throw err;
+      await new Promise(r => setTimeout(r, 5000 * attempt));
+    }
   }
-  return poolPromise;
 }
 
 // Static Web Apps passes the signed-in user in this header (base64 JSON).
