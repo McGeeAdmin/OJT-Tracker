@@ -64,7 +64,7 @@ app.http('employeeSummary', {
       .query('SELECT EmployeeId AS id, FirstName AS first, LastName AS last, Active AS active FROM dbo.Employees WHERE EmployeeId=@id');
     if (!e.recordset.length) return json(404, { error: 'No trainee has that ID.' });
     const rows = await pool.request().input('id', sql.VarChar(20), id).query(`
-      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, Phase AS io, Week AS week,
+      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, RTRIM(Phase) AS io, Week AS week,
              Gate AS gate, Flight AS flight, Tail AS tail, Notes AS notes, TrainerName AS trainer, TrainerEmail AS trainerEmail
       FROM dbo.TaskLog WHERE EmployeeId=@id ORDER BY LogDate DESC, Id DESC`);
     const recs = rows.recordset, counts = {};
