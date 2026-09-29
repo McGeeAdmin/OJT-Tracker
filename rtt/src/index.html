@@ -172,7 +172,7 @@ async function api(path, opts = {}) {
     // Sign in once; if the API still says 401 right after signing in, stop and explain instead of looping.
     let tried = false; try { tried = sessionStorage.getItem('rtt-login') === '1'; sessionStorage.setItem('rtt-login', '1'); } catch (e) {}
     if (!tried) { location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(location.pathname); throw new Error('Signing you in…'); }
-    throw new Error('You’re signed in, but the app’s server didn’t receive your sign-in. A supervisor should check that the Function App is linked under Static Web App → Settings → APIs.');
+    throw new Error('You’re signed in, but the app’s server didn’t receive your sign-in. Please contact IT team.');
   }
   try { sessionStorage.removeItem('rtt-login'); } catch (e) {}
   const text = await r.text();
@@ -244,9 +244,9 @@ function vLog() {
    </div>
    <div>
     <div class="grid g4">
-     <div><label for="f-gate">Gate</label><input id="f-gate" value="${esc(F.gate)}" placeholder="N11" autocapitalize="characters"></div>
-     <div><label for="f-flight">Flight #</label><input id="f-flight" inputmode="numeric" value="${esc(F.flight)}" placeholder="219"></div>
-     <div><label for="f-tail">Tail number</label><input id="f-tail" value="${esc(F.tail)}" placeholder="N283AK" autocapitalize="characters"></div>
+     <div><label for="f-gate">Gate</label><input id="f-gate" value="${esc(F.gate)}" autocapitalize="characters"></div>
+     <div><label for="f-flight">Flight #</label><input id="f-flight" inputmode="numeric" value="${esc(F.flight)}"></div>
+     <div><label for="f-tail">Tail number</label><input id="f-tail" value="${esc(F.tail)}" autocapitalize="characters"></div>
     </div>
     ${TODAY.length ? `<p class="hint">Your flights on this date: ${TODAY.map((f, i) => `<button class="link" style="color:var(--ink)" data-fl="${i}">${esc(f.gate)} ${esc(f.flight || f.tail)} ${f.io}</button>`).join(' ')}</p>` : ''}
    </div>
@@ -304,7 +304,7 @@ function pickName(v) {
    <div class="grid g4"><div><label for="n-first">First name</label><input id="n-first" value="${esc(/^\d+$/.test(v) ? '' : parts[0] || '')}"></div>
    <div><label for="n-last">Last name</label><input id="n-last" value="${esc(/^\d+$/.test(v) ? '' : parts.slice(1).join(' '))}"></div>
    <div><label for="n-id">Employee ID</label><input id="n-id" inputmode="numeric" value="${/^\d+$/.test(v) ? esc(v) : ''}"></div></div>
-   <p class="hint">Double-check the ID. It can only be changed by a supervisor later.</p>
+   <p class="hint">Double-check the ID. It can only be changed by an admin later.</p>
    <div class="actions"><button class="btn" id="n-add">Add team member</button></div><p class="err" id="n-err" role="alert"></p></div>`;
   $('#n-add').onclick = async () => {
     const btn = $('#n-add'); btn.disabled = true;
@@ -505,7 +505,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.data
   try {
     [ME, TASKS, EMPS] = await Promise.all([api('me'), api('tasks'), api('employees')]);
     TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
-    $('#me').innerHTML = `${esc(ME.name)}${ME.isAdmin ? ' (supervisor)' : ''} <a href="/.auth/logout">Sign out</a>`;
+    $('#me').innerHTML = `${esc(ME.name)}${ME.isAdmin ? ' (admin)' : ''} <a href="/.auth/logout">Sign out</a>`;
     freshForm(); await loadToday(); go('log');
   } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 })();
