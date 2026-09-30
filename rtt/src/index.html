@@ -161,7 +161,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 
 <script>
 /* ---------- API ---------- */
-async function api(path, opts = {}) {
+async function api(path, opts = {}, tries = 0) {
   let r;
   try {
     r = await fetch('/api/' + path, {
@@ -184,6 +184,11 @@ async function api(path, opts = {}) {
     throw new Error('The server returned an error (' + r.status + '). Try again in a minute.');
   }
   let data = null; try { data = text ? JSON.parse(text) : null; } catch (e) {}
+  if (r.status === 503 && data && data.retry && tries < 3) {
+    toast('The database is waking up. This can take up to a minute…');
+    await new Promise(res => setTimeout(res, 5000));
+    return api(path, opts, tries + 1);
+  }
   if (!r.ok) throw new Error((data && data.error) || 'The server returned an error (' + r.status + '). Try again.');
   return data;
 }
