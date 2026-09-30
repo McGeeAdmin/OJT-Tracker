@@ -11,17 +11,38 @@ const dbConfig = {
 };
 
 let poolPromise = null;
+const WAKE_WINDOW_MS = 40000;   // stay under Static Web Apps' ~45 s request limit
+
 async function db() {
+  const start = Date.now();
   for (let attempt = 1; ; attempt++) {
     try {
       if (!poolPromise) poolPromise = new sql.ConnectionPool(dbConfig).connect();
       return await poolPromise;
     } catch (err) {
       poolPromise = null;
-      if (attempt >= 3) throw err;
-      await new Promise(r => setTimeout(r, 5000 * attempt));
+      const wait = Math.min(2000 * attempt, 8000);           // 2 s, 4 s, 6 s, 8 s, 8 s…
+      if (Date.now() - start + wait > WAKE_WINDOW_MS) {
+        err.dbUnavailable = true;                             // lets secured() send a "try again" reply
+        throw err;
+      }
+      await new Promise(r => setTimeout(r, wait));
     }
   }
+}
+
+function secured(handler) {
+  return async (request, context) => {
+    const user = getUser(request);
+    if (!user) return json(401, { error: 'Sign in to continue.' });
+    try {
+      return await handler(request, context, user);
+    } catch (err) {
+      context.error(err);
+      if (err.dbUnavailable) return json(503, { error: 'The database didn’t respond. It may still be starting up. Try again in a minute, and tell your supervisor if it keeps happening.', retry: true });
+      return json(500, { error: 'The server could not complete that request. Try again, and tell your supervisor if it keeps happening.' });
+    }
+  };
 }
 
 // Static Web Apps passes the signed-in user in this header (base64 JSON).
@@ -41,19 +62,6 @@ function getUser(request) {
 const json = (status, body) => ({ status, jsonBody: body });
 const bad = msg => json(400, { error: msg });
 
-// Wraps a handler: requires sign-in, turns thrown errors into clean 500s.
-function secured(handler) {
-  return async (request, context) => {
-    const user = getUser(request);
-    if (!user) return json(401, { error: 'Sign in to continue.' });
-    try {
-      return await handler(request, context, user);
-    } catch (err) {
-      context.error(err);
-      return json(500, { error: 'The server could not complete that request. Try again, and tell your supervisor if it keeps happening.' });
-    }
-  };
-}
 
 const clean = (v, max) => {
   const s = String(v ?? '').trim();
