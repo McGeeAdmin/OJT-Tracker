@@ -11,9 +11,9 @@ app.http('employees', {
       const r = await pool.request().query(`
         SELECT e.EmployeeId AS id, e.FirstName AS first, e.LastName AS last, e.Active AS active,
                COUNT(t.Id) AS total, CONVERT(char(10), MAX(t.LogDate), 23) AS lastDate,
-               (SELECT STRING_AGG(x.TrainerEmail, ',') FROM (SELECT DISTINCT TrainerEmail FROM dbo.TaskLog WHERE EmployeeId = e.EmployeeId) x) AS trainerEmails,
-               (SELECT STRING_AGG(x.TrainerName, ', ') FROM (SELECT DISTINCT TrainerName FROM dbo.TaskLog WHERE EmployeeId = e.EmployeeId) x) AS trainerNames
-        FROM dbo.Employees e LEFT JOIN dbo.TaskLog t ON t.EmployeeId = e.EmployeeId
+               (SELECT STRING_AGG(x.TrainerEmail, ',') FROM (SELECT DISTINCT TrainerEmail FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerEmails,
+               (SELECT STRING_AGG(x.TrainerName, ', ') FROM (SELECT DISTINCT TrainerName FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerNames
+        FROM dbo.ojt_employees e LEFT JOIN dbo.ojt_tasklog t ON t.EmployeeId = e.EmployeeId
         ${all ? '' : 'WHERE e.Active = 1'}
         GROUP BY e.EmployeeId, e.FirstName, e.LastName, e.Active
         ORDER BY e.LastName, e.FirstName`);
@@ -24,7 +24,7 @@ app.http('employees', {
     if (!first || !last) return bad('Enter a first and last name.');
     if (!id || !/^\d{4,20}$/.test(id)) return bad('Employee ID must be numbers only, at least 4 digits.');
     const exists = await pool.request().input('id', sql.VarChar(20), id)
-      .query('SELECT FirstName, LastName FROM dbo.Employees WHERE EmployeeId = @id');
+      .query('SELECT FirstName, LastName FROM dbo.ojt_employees WHERE EmployeeId = @id');
     if (exists.recordset.length) {
       const e = exists.recordset[0];
       return json(409, { error: `ID ${id} already belongs to ${e.FirstName} ${e.LastName}.` });
@@ -32,7 +32,7 @@ app.http('employees', {
     await pool.request()
       .input('id', sql.VarChar(20), id).input('f', sql.NVarChar(60), first)
       .input('l', sql.NVarChar(60), last).input('by', sql.NVarChar(200), user.email)
-      .query('INSERT INTO dbo.Employees (EmployeeId, FirstName, LastName, CreatedBy) VALUES (@id, @f, @l, @by)');
+      .query('INSERT INTO dbo.ojt_employees (EmployeeId, FirstName, LastName, CreatedBy) VALUES (@id, @f, @l, @by)');
     return json(201, { id, first, last, active: true, total: 0, lastDate: null, trainerEmails: [], trainerNames: '' });
   })
 });
@@ -48,7 +48,7 @@ app.http('employeeEdit', {
     const r = await (await db()).request()
       .input('id', sql.VarChar(20), req.params.id).input('f', sql.NVarChar(60), first)
       .input('l', sql.NVarChar(60), last).input('a', sql.Bit, b.active ? 1 : 0)
-      .query('UPDATE dbo.Employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@id');
+      .query('UPDATE dbo.ojt_employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@id');
     if (!r.rowsAffected[0]) return json(404, { error: 'That trainee no longer exists.' });
     return json(200, { ok: true });
   })
@@ -61,12 +61,12 @@ app.http('employeeSummary', {
     const pool = await db();
     const id = req.params.id;
     const e = await pool.request().input('id', sql.VarChar(20), id)
-      .query('SELECT EmployeeId AS id, FirstName AS first, LastName AS last, Active AS active FROM dbo.Employees WHERE EmployeeId=@id');
+      .query('SELECT EmployeeId AS id, FirstName AS first, LastName AS last, Active AS active FROM dbo.ojt_employees WHERE EmployeeId=@id');
     if (!e.recordset.length) return json(404, { error: 'No trainee has that ID.' });
     const rows = await pool.request().input('id', sql.VarChar(20), id).query(`
-      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, RTRIM(Phase) AS io, Week AS week,
+      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, Phase AS io, Week AS week,
              Gate AS gate, Flight AS flight, Tail AS tail, Notes AS notes, TrainerName AS trainer, TrainerEmail AS trainerEmail
-      FROM dbo.TaskLog WHERE EmployeeId=@id ORDER BY LogDate DESC, Id DESC`);
+      FROM dbo.ojt_tasklog WHERE EmployeeId=@id ORDER BY LogDate DESC, Id DESC`);
     const recs = rows.recordset, counts = {};
     recs.forEach(r => { counts[r.task] = (counts[r.task] || 0) + 1; });
     return json(200, {

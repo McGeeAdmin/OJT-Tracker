@@ -1,6 +1,6 @@
--- Ramp Trainee Tracker schema. Run once in the Azure SQL query editor.
 
-CREATE TABLE dbo.Employees (
+
+CREATE TABLE dbo.ojt_employees (
     EmployeeId   VARCHAR(20)   NOT NULL PRIMARY KEY,
     FirstName    NVARCHAR(60)  NOT NULL,
     LastName     NVARCHAR(60)  NOT NULL,
@@ -9,12 +9,12 @@ CREATE TABLE dbo.Employees (
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
--- One row per task completed. A single form submission shares one EntryGroupId.
-CREATE TABLE dbo.TaskLog (
+
+CREATE TABLE dbo.ojt_tasklog (
     Id           INT IDENTITY(1,1) PRIMARY KEY,
     EntryGroupId UNIQUEIDENTIFIER NOT NULL,
     LogDate      DATE          NOT NULL,
-    EmployeeId   VARCHAR(20)   NOT NULL REFERENCES dbo.Employees(EmployeeId),
+    EmployeeId   VARCHAR(20)   NOT NULL REFERENCES dbo.ojt_employees(EmployeeId),
     TaskCode     VARCHAR(40)   NOT NULL,   -- task list lives in api/src/taskList.js
     Phase        CHAR(3)       NOT NULL CHECK (Phase IN ('IN','OUT')),
     Week         TINYINT       NOT NULL CHECK (Week IN (1,2)),
@@ -26,6 +26,6 @@ CREATE TABLE dbo.TaskLog (
     TrainerName  NVARCHAR(120) NOT NULL,
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 );
-CREATE INDEX IX_TaskLog_Employee ON dbo.TaskLog(EmployeeId, TaskCode);
-CREATE INDEX IX_TaskLog_Date     ON dbo.TaskLog(LogDate DESC);
-CREATE INDEX IX_TaskLog_Trainer  ON dbo.TaskLog(TrainerEmail, LogDate);
+CREATE INDEX IX_ojt_tasklog_Employee ON dbo.ojt_tasklog(EmployeeId, TaskCode);
+CREATE INDEX IX_ojt_tasklog_Date     ON dbo.ojt_tasklog(LogDate DESC);
+CREATE INDEX IX_ojt_tasklog_Trainer  ON dbo.ojt_tasklog(TrainerEmail, LogDate);

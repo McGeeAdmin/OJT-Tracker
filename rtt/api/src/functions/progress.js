@@ -7,7 +7,7 @@ app.http('progress', {
   handler: secured(async () => {
     const r = await (await db()).request().query(`
       SELECT t.EmployeeId AS eid, t.TaskCode AS task, COUNT(*) AS n
-      FROM dbo.TaskLog t JOIN dbo.Employees e ON e.EmployeeId = t.EmployeeId
+      FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
       WHERE e.Active = 1
       GROUP BY t.EmployeeId, t.TaskCode`);
     return json(200, r.recordset);
