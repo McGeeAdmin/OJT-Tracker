@@ -45,6 +45,13 @@ h2{font:700 22px/1.2 var(--cond);margin:0 0 10px}
 label{display:block;font-weight:600;font-size:14px;margin-bottom:5px}
 input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);min-height:46px}
 textarea{min-height:70px;resize:vertical}
+input[type="date"]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%}
+input[type="date"]::-webkit-date-and-time-value{text-align:left;margin:0}
+.sugg{border:1px solid var(--line);border-top:0;border-radius:0 0 4px 4px;background:var(--panel);max-height:300px;overflow:auto}
+.sugg button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:12px;min-height:48px;text-align:left;cursor:pointer}
+.sugg button:last-child{border-bottom:0}
+.sugg small{color:var(--muted)}
+.sugg .add{font-weight:600;color:var(--arr)}
 input[readonly]{background:var(--soft);color:var(--muted)}
 .seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .seg button{flex:1;border:0;background:var(--panel);padding:11px 8px;min-height:46px;font-weight:600;cursor:pointer}
@@ -240,9 +247,9 @@ function vLog() {
    </div>
    <div>
     <label for="f-name">TM</label>
-    <input id="f-name" list="emp-list" autocomplete="off" placeholder="Start typing a name or employee ID" value="${e ? esc(nameOf(e)) : ''}">
-    <datalist id="emp-list">${EMPS.map(x => `<option value="${esc(nameOf(x))}">${x.id}</option>`).join('')}</datalist>
-    <p class="hint">${e ? '' : 'Not on the list? Type their full name and press Enter to add them.'}</p>
+    <input id="f-name" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Start typing a name or employee ID" value="${e ? esc(nameOf(e)) : ''}">
+    <div class="sugg" id="sugg" hidden></div>
+    <p class="hint">${e ? '' : 'Not on the list? Type their full name and tap Add.'}</p>
     ${e ? `<div class="who"><span class="sign">${esc(e.last.toUpperCase())}, ${esc(e.first.toUpperCase())}</span><span class="sign y">ID ${esc(e.id)}</span></div>` : ''}
     <div id="newemp"></div>
    </div>
@@ -275,8 +282,8 @@ function vLog() {
   app.querySelectorAll('[data-io]').forEach(b => b.onclick = () => { F.io = b.dataset.io; vLog(); });
   app.querySelectorAll('[data-fl]').forEach(b => b.onclick = () => { Object.assign(F, TODAY[b.dataset.fl]); vLog(); });
   const nm = $('#f-name');
-  nm.addEventListener('change', () => pickName(nm.value));
-  nm.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); pickName(nm.value); } });
+  nm.addEventListener('input', () => showSugg(nm.value));
+  nm.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); $('#sugg').hidden = true; pickName(nm.value); } });
   $('#save-next').onclick = () => submit(true); $('#save-done').onclick = () => submit(false);
 }
 function renderTasks(c) {
@@ -297,8 +304,20 @@ async function chooseEmp(id) {
   try { const s = await summary(id, true); F.week = guessWeek(s); } catch (e) { fail(e); }
   vLog();
 }
+function showSugg(v) {
+  const box = $('#sugg'); v = v.trim(); const lv = v.toLowerCase();
+  if (!v) { box.hidden = true; box.innerHTML = ''; return; }
+  const hits = EMPS.filter(x => (nameOf(x) + ' ' + x.id).toLowerCase().includes(lv)).slice(0, 8);
+  const exact = hits.some(x => nameOf(x).toLowerCase() === lv || x.id === v);
+  box.innerHTML = hits.map(x => `<button type="button" data-pick="${esc(x.id)}"><span>${esc(nameOf(x))}</span><small>ID ${esc(x.id)}</small></button>`).join('')
+    + (exact ? '' : `<button type="button" class="add" data-new="1">＋ Add “${esc(v)}” as a new team member</button>`);
+  box.hidden = false;
+  box.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { box.hidden = true; chooseEmp(b.dataset.pick); });
+  const add = box.querySelector('[data-new]');
+  if (add) add.onclick = () => { box.hidden = true; pickName(v, true); };
+}
 let lastPick = '';
-function pickName(v) {
+function pickName(v, forceNew) {
   v = v.trim();
   if (v && v === lastPick && $('#n-first')) return;   // new-tm form already open for this name
   lastPick = v;
@@ -306,7 +325,7 @@ function pickName(v) {
   const lv = v.toLowerCase();
   const partial = EMPS.filter(x => nameOf(x).toLowerCase().includes(lv));
   const e = EMPS.find(x => nameOf(x).toLowerCase() === lv || x.id === v) || (partial.length === 1 ? partial[0] : null);
-  if (e) return chooseEmp(e.id);
+  if (e && !forceNew) return chooseEmp(e.id);
   F.eid = '';
   const parts = v.split(' ');
   $('#newemp').innerHTML = `<div class="panel" style="margin-top:10px;background:var(--soft)"><h2>Add a new team member</h2>
