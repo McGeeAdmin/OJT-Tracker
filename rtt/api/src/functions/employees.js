@@ -8,13 +8,14 @@ app.http('employees', {
     const pool = await db();
     if (req.method === 'GET') {
       const all = req.query.get('all') === '1' && user.isAdmin;
+      const finished = req.query.get('finished') === '1';
       const r = await pool.request().query(`
         SELECT e.EmployeeId AS id, e.FirstName AS first, e.LastName AS last, e.Active AS active,
                COUNT(t.Id) AS total, CONVERT(char(10), MAX(t.LogDate), 23) AS lastDate,
                (SELECT STRING_AGG(x.TrainerEmail, ',') FROM (SELECT DISTINCT TrainerEmail FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerEmails,
                (SELECT STRING_AGG(x.TrainerName, ', ') FROM (SELECT DISTINCT TrainerName FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerNames
         FROM dbo.ojt_employees e LEFT JOIN dbo.ojt_tasklog t ON t.EmployeeId = e.EmployeeId
-        ${all ? '' : 'WHERE e.Active = 1'}
+        ${finished? 'WHERE e.Active = 0' : all ? '' : 'WHERE e.Active = 1'}
         GROUP BY e.EmployeeId, e.FirstName, e.LastName, e.Active
         ORDER BY e.LastName, e.FirstName`);
       return json(200, r.recordset.map(e => ({ ...e, trainerEmails: (e.trainerEmails || '').toLowerCase().split(',').filter(Boolean), trainerNames: e.trainerNames || '' })));

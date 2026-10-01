@@ -155,6 +155,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 <nav aria-label="Main">
 <button data-v="log" aria-current="page"><span class="ico" aria-hidden="true">＋</span>Submit tasks</button>
 <button data-v="view"><span class="ico" aria-hidden="true">☰</span>View submissions</button>
+<button data-v="done"><span class="ico" aria-hidden="true">✓</span>Completed</button>
 </nav><div class="me" id="me"></div></div></header>
 <main id="app"><div class="loading">Signing you in…</div></main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -411,7 +412,7 @@ async function detail() {
     $('#edit-box').innerHTML = `<div class="panel" style="margin-top:14px;background:var(--soft)"><h2>Edit Team Member</h2><div class="grid g4">
       <div><label for="e-first">First name</label><input id="e-first" value="${esc(e.first)}"></div>
       <div><label for="e-last">Last name</label><input id="e-last" value="${esc(e.last)}"></div>
-      <div><label for="e-act">Status</label><select id="e-act"><option value="1" ${e.active ? 'selected' : ''}>In training</option><option value="0" ${e.active ? '' : 'selected'}>Finished or left (hide)</option></select></div></div>
+      <div><label for="e-act">Status</label><select id="e-act"><option value="1" ${e.active ? 'selected' : ''}>In training</option><option value="0" ${e.active ? '' : 'selected'}>Finished</option></select></div></div>
       <div class="actions"><button class="btn" id="e-save">Save changes</button></div><p class="err" id="e-err" role="alert"></p></div>`;
     $('#e-save').onclick = async () => {
       try {
@@ -449,7 +450,7 @@ function vList() {
   const on = (id, k, ev = 'change') => $(id).addEventListener(ev, e => { H[k] = e.target.value; clearTimeout(timer); timer = setTimeout(loadHist, ev === 'input' ? 350 : 0); });
   on('#h-who', 'who', 'input'); on('#h-tr', 'trainer'); on('#h-task', 'task'); on('#h-from', 'from'); on('#h-to', 'to');
   $('#clear').onclick = () => { H = { trainer: '', task: '', who: '', from: '', to: '' }; vList(); };
-  $('#csv').onclick = downloadCsv;
+  $('#csv').onclick = () => downloadCsv(HD.rows, 'training-submissions');
   loadHist();
 }
 async function loadHist() {
@@ -490,20 +491,64 @@ function dayLabel(d) {
   if (d === ys) return 'Yesterday';
   return new Date(d + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
-function downloadCsv() {
+function downloadCsv(rows, name) {
   const h = ['Date', 'EmployeeID', 'Team Member', 'Task', 'Phase', 'Gate', 'Flight', 'Tail', 'Week', 'Trainer', 'Notes'];
   const qv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const csv = [h.join(',')].concat(HD.rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
+  const csv = [h.join(',')].concat(rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
-  a.download = 'training-submissions-' + today() + '.csv'; a.click();
+  a.download = name + '-' + today() + '.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- COMPLETED ---------- */
+let DONE = { emps: [], rows: [] }, dsel = '';
+async function vDone() {
+  app.innerHTML = `<h1>Completed</h1><p class="sub">Team Members marked as finished, and every task logged for them.</p><div id="dv"><div class="loading">Loading…</div></div>`;
+  try {
+    const [emps, ents] = await Promise.all([api('employees?finished=1'), api('entries?finished=1&top=5000')]);
+    DONE = { emps, rows: ents.rows };
+  } catch (e) { if ($('#dv')) $('#dv').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if ($('#dv')) doneRender();
+}
+function doneRender() {
+  const emps = DONE.emps;
+  if (dsel && !emps.some(e => e.id === dsel)) dsel = '';
+  const rows = dsel ? DONE.rows.filter(r => r.eid === dsel) : DONE.rows;
+  if (!emps.length) { $('#dv').innerHTML = '<div class="empty">No one is marked as finished.</div>'; return; }
+  $('#dv').innerHTML = `
+  <h2>Finished Team Members</h2>
+  <div class="scroll"><table><thead><tr><th>Team Member</th><th>ID</th><th>Tasks logged</th><th>Last logged</th><th></th></tr></thead><tbody>
+  ${emps.map(e => `<tr><td>${esc(nameOf(e))}</td><td>${esc(e.id)}</td><td>${e.total}</td><td>${fmtD(e.lastDate)}</td>
+    <td>${ME.isAdmin ? `<button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button>` : ''}</td></tr>`).join('')}
+  </tbody></table></div>
+  <h2 style="margin-top:24px">Task log</h2>
+  <div class="row"><div><label for="d-who">Team Member</label><select id="d-who"><option value="">All finished Team Members</option>
+    ${emps.map(e => `<option value="${esc(e.id)}" ${e.id === dsel ? 'selected' : ''}>${esc(nameOf(e))} (${esc(e.id)})</option>`).join('')}</select></div>
+    <div style="flex:0 0 auto"><button class="btn sec" id="d-csv" ${rows.length ? '' : 'disabled'}>Download as CSV</button></div></div>
+  ${rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${fmtD(r.date)}</td><td>${esc(r.trainee)}</td><td>${esc(r.eid)}</td><td>${esc(TMAP[r.task] ? TMAP[r.task].label : r.task)}</td>
+      <td>${r.io === 'IN' ? 'Arrival' : 'Departure'}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
+      <td>${r.week}</td><td>${esc(r.trainer)}</td><td>${esc(r.notes)}</td></tr>`).join('')}
+  </tbody></table></div>` : '<div class="empty">No tasks were logged for this Team Member.</div>'}`;
+  $('#d-who').onchange = ev => { dsel = ev.target.value; doneRender(); };
+  $('#d-csv').onclick = () => downloadCsv(rows, dsel ? 'completed-' + dsel : 'completed-trainees');
+  app.querySelectorAll('[data-react]').forEach(b => b.onclick = async () => {
+    const e = DONE.emps.find(x => x.id === b.dataset.react);
+    if (!confirm(`Put ${nameOf(e)} back in training? They'll show up again on Submit tasks and View submissions.`)) return;
+    b.disabled = true;
+    try {
+      await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: e.first, last: e.last, active: true } });
+      delete SUM[e.id]; PROG = null; await reloadEmps();
+      toast(nameOf(e) + ' is back in training'); vDone();
+    } catch (x) { fail(x); b.disabled = false; }
+  });
 }
 
 /* ---------- BOOT ---------- */
 function go(v) {
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
-  ({ log: vLog, view: vView })[v](); window.scrollTo(0, 0);
+  ({ log: vLog, view: vView, done: vDone })[v](); window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 (async () => {

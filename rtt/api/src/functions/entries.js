@@ -15,6 +15,7 @@ app.http('entries', {
       if (q('mine') === '1') { where.push('t.TrainerEmail = @me'); r.input('me', sql.NVarChar(200), user.email); }
       if (q('trainer')) { where.push('t.TrainerName = @tr'); r.input('tr', sql.NVarChar(120), q('trainer')); }
       if (q('task')) { where.push('t.TaskCode = @task'); r.input('task', sql.VarChar(40), q('task')); }
+      if (q('finished') === '1') where.push('e.Active = 0');
       if (isDate(q('from'))) { where.push('t.LogDate >= @from'); r.input('from', sql.Date, q('from')); }
       if (isDate(q('to'))) { where.push('t.LogDate <= @to'); r.input('to', sql.Date, q('to')); }
       if (q('who')) {
