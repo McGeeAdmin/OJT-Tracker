@@ -123,17 +123,20 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .ph.IN{background:var(--arr)}.ph.OUT{background:var(--dep)}
 .filters{margin-bottom:6px}
 .filters summary{font:700 18px/1.2 var(--cond);cursor:pointer;min-height:28px}
-.day{font:700 18px/1.2 var(--cond);margin:22px 0 8px;color:var(--muted)}
-.sub-card{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--dep);border-radius:6px;padding:14px 16px;margin-bottom:10px}
+.day{font:700 17px/1.2 var(--cond);margin:16px 0 6px;color:var(--muted)}
+.sub-card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--dep);border-radius:4px;padding:8px 12px;margin-bottom:6px}
 .sub-card.IN{border-left-color:var(--arr)}
-.sc-top{display:flex;justify-content:space-between;gap:10px;align-items:start}
-.sc-top .name{color:var(--ink);font-weight:700;font-size:18px;padding:0;text-align:left}
-.sc-top small,.sc-foot small{color:var(--muted)}
-.sc-flight{margin:6px 0 10px;font-size:15px}
-.sc-tasks{display:flex;flex-wrap:wrap;gap:6px}
-.tag{background:var(--soft);border:1px solid var(--line);border-radius:3px;padding:4px 9px;font-size:14px;font-weight:600}
-.sc-notes{margin:10px 0 0;font-size:14px;color:var(--muted)}
-.sc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.sc-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.sc-top .name{color:var(--ink);font-weight:700;font-size:16px;padding:0;text-align:left}
+.sc-top small{color:var(--muted)}
+.sc-right{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.sc-right .link{padding:0 2px}
+.sc-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:4px;font-size:14px}
+.sc-tasks{display:flex;flex-wrap:wrap;gap:4px}
+.tag{background:var(--soft);border:1px solid var(--line);border-radius:3px;padding:1px 7px;font-size:13px;font-weight:600}
+.sc-notes{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
+.pager span{color:var(--muted);font-size:14px}
 @media (max-width:700px){
   .bar{padding:10px 14px}
   .me{font-size:13px}
@@ -438,6 +441,7 @@ function grid() {
 /* All submissions: one card per form submission */
 let H = { trainer: '', task: '', who: '', from: '', to: '' }, HD = { rows: [], trainers: [] }, lim = 500, timer;
 function vList() {
+  pg = 0;
   const active = Object.values(H).filter(Boolean).length;
   $('#tv').innerHTML = `<details class="panel filters" ${innerWidth > 700 || active ? 'open' : ''}><summary>Filters${active ? ' (' + active + ' on)' : ''}</summary><div class="grid g4" style="margin-top:12px">
    <div><label for="h-who">Team Member</label><input id="h-who" value="${esc(H.who)}" placeholder="Name or ID"></div>
@@ -447,39 +451,57 @@ function vList() {
    <div><label for="h-to">To</label><input id="h-to" type="date" value="${H.to}"></div>
   </div><div class="actions" style="margin-top:12px"><button class="btn sec" id="clear">Clear filters</button><button class="btn sec" id="csv">Download as CSV</button></div></details>
   <div id="hrows"><div class="loading">Loading…</div></div>`;
-  const on = (id, k, ev = 'change') => $(id).addEventListener(ev, e => { H[k] = e.target.value; clearTimeout(timer); timer = setTimeout(loadHist, ev === 'input' ? 350 : 0); });
+  const on = (id, k, ev = 'change') => $(id).addEventListener(ev, e => { H[k] = e.target.value; pg = 0; clearTimeout(timer); timer = setTimeout(loadHist, ev === 'input' ? 350 : 0); });
   on('#h-who', 'who', 'input'); on('#h-tr', 'trainer'); on('#h-task', 'task'); on('#h-from', 'from'); on('#h-to', 'to');
-  $('#clear').onclick = () => { H = { trainer: '', task: '', who: '', from: '', to: '' }; vList(); };
+  $('#clear').onclick = () => { H = { trainer: '', task: '', who: '', from: '', to: '' }; pg = 0; vList(); };
   $('#csv').onclick = () => downloadCsv(HD.rows, 'training-submissions');
   loadHist();
 }
+const PER = 20; let pg = 0, GROUPS = [], BYG = {};
 async function loadHist() {
   const p = new URLSearchParams({ top: lim }); Object.entries(H).forEach(([k, v]) => v && p.set(k, v));
   if (scope === 'mine') p.set('mine', '1');
   try { HD = await api('entries?' + p); } catch (e) { if (!$('#hrows')) return; $('#hrows').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   if (!$('#hrows')) return;   // user moved to another view while loading
+  HD.rows.forEach(r => { r.io = String(r.io || '').trim(); });
   $('#h-tr').innerHTML = '<option value="">All trainers</option>' + HD.trainers.map(t => `<option ${t === H.trainer ? 'selected' : ''}>${esc(t)}</option>`).join('');
   // group task rows back into submissions
-  const groups = [], byG = {};
-  HD.rows.forEach(r => { let g = byG[r.grp]; if (!g) { g = byG[r.grp] = { ...r, tasks: [] }; groups.push(g); } g.tasks.push(r.task); });
+  GROUPS = []; BYG = {};
+  HD.rows.forEach(r => { let g = BYG[r.grp]; if (!g) { g = BYG[r.grp] = { ...r, tasks: [] }; GROUPS.push(g); } g.tasks.push(r.task); });
+  // if the server hit its row limit, the oldest submission may be cut off; leave it for the next load
+  if (HD.rows.length >= lim && GROUPS.length > 1) delete BYG[GROUPS.pop().grp];
+  renderHist();
+}
+function renderHist() {
+  const more = HD.rows.length >= lim;
+  const pages = Math.max(1, Math.ceil(GROUPS.length / PER));
+  if (pg > pages - 1) pg = pages - 1;
+  const shown = GROUPS.slice(pg * PER, pg * PER + PER);
+  const hasOlder = pg < pages - 1 || more;
   let lastDate = '';
-  $('#hrows').innerHTML = groups.length ? groups.map(g => {
+  $('#hrows').innerHTML = shown.length ? shown.map(g => {
     const hdr = g.date !== lastDate ? `<h3 class="day">${dayLabel(g.date)}</h3>` : ''; lastDate = g.date;
-    const canDel = ME.isAdmin || g.trainerEmail.toLowerCase() === ME.email;
+    const mine = g.trainerEmail.toLowerCase() === ME.email, canDel = ME.isAdmin || mine;
     return `${hdr}<article class="sub-card ${g.io}">
-      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small></div>
-        <span class="pill ${g.io}">${g.io === 'IN' ? 'Arrival' : 'Departure'}</span></div>
-      <div class="sc-flight">Gate <b>${esc(g.gate)}</b> &nbsp; Flight <b>${esc(g.flight) || '—'}</b> &nbsp; Tail <b>${esc(g.tail) || '—'}</b> &nbsp; Week <b>${g.week}</b></div>
-      <div class="sc-tasks">${g.tasks.map(t => `<span class="tag">${esc(TMAP[t] ? TMAP[t].label : t)}</span>`).join('')}</div>
+      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small> <span class="pill ${g.io}">${g.io === 'IN' ? 'Arrival' : 'Departure'}</span></div>
+        <div class="sc-right"><span>by ${esc(g.trainer)}${mine ? ' (you)' : ''}</span>${canDel ? `<button class="link" data-del="${g.grp}">Delete</button>` : ''}</div></div>
+      <div class="sc-line"><span>Gate <b>${esc(g.gate)}</b> &nbsp; Flight <b>${esc(g.flight) || '—'}</b> &nbsp; Tail <b>${esc(g.tail) || '—'}</b> &nbsp; Wk <b>${g.week}</b></span>
+        <div class="sc-tasks">${g.tasks.map(t => `<span class="tag">${esc(TMAP[t] ? TMAP[t].label : t)}</span>`).join('')}</div></div>
       ${g.notes ? `<p class="sc-notes">“${esc(g.notes)}”</p>` : ''}
-      <div class="sc-foot"><small>Logged by ${esc(g.trainer)}${g.trainerEmail.toLowerCase() === ME.email ? ' (you)' : ''}</small>${canDel ? `<button class="link" data-del="${g.grp}">Delete</button>` : ''}</div>
     </article>`;
-  }).join('') + (HD.rows.length >= lim ? `<div class="actions"><button class="btn sec" id="more">Show older submissions</button></div>` : '')
+  }).join('') + `<div class="pager"><button class="btn sec" id="pg-prev" ${pg ? '' : 'disabled'}>‹ Newer</button>
+      <span>${pg * PER + 1}–${pg * PER + shown.length} of ${GROUPS.length}${more ? '+' : ''} submissions</span>
+      <button class="btn sec" id="pg-next" ${hasOlder ? '' : 'disabled'}>Older ›</button></div>`
   : `<div class="empty">${scope === 'mine' ? 'You haven’t submitted anything that matches these filters.' : 'Nothing matches these filters. Clear a filter to see more.'}</div>`;
-  $('#more') && ($('#more').onclick = () => { lim += 1000; loadHist(); });
+  const top = () => { const h = $('#hrows'); if (h) window.scrollTo(0, h.getBoundingClientRect().top + scrollY - 90); };
+  $('#pg-prev') && ($('#pg-prev').onclick = () => { pg--; renderHist(); top(); });
+  $('#pg-next') && ($('#pg-next').onclick = async () => {
+    if (pg < pages - 1) { pg++; renderHist(); top(); return; }
+    lim += 1000; pg++; await loadHist(); top();
+  });
   app.querySelectorAll('[data-open-emp]').forEach(b => b.onclick = () => { sel = b.dataset.openEmp; open = null; vmode = 'Team Member'; vView(); });
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    const g = byG[b.dataset.del];
+    const g = BYG[b.dataset.del];
     if (!confirm(`Delete this submission for ${g.trainee} (${g.tasks.length} task${g.tasks.length > 1 ? 's' : ''}, flight ${g.flight || g.tail}, ${fmtD(g.date)})?`)) return;
     try { await api('submissions/' + g.grp, { method: 'DELETE' }); delete SUM[g.eid]; PROG = null; toast('Deleted submission'); loadHist(); } catch (e) { fail(e); }
   });
@@ -502,38 +524,47 @@ function downloadCsv(rows, name) {
 }
 
 /* ---------- COMPLETED ---------- */
-let DONE = { emps: [], rows: [] }, dsel = '';
+let DONE = { emps: [], rows: [] }, dq = '';
 async function vDone() {
   app.innerHTML = `<h1>Completed</h1><p class="sub">Team Members marked as finished, and every task logged for them.</p><div id="dv"><div class="loading">Loading…</div></div>`;
   try {
     const [emps, ents] = await Promise.all([api('employees?finished=1'), api('entries?finished=1&top=5000')]);
+    ents.rows.forEach(r => { r.io = String(r.io || '').trim(); });
     DONE = { emps, rows: ents.rows };
   } catch (e) { if ($('#dv')) $('#dv').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
-  if ($('#dv')) doneRender();
+  if (!$('#dv')) return;
+  if (!DONE.emps.length) { $('#dv').innerHTML = '<div class="empty">No one is marked as finished.</div>'; return; }
+  $('#dv').innerHTML = `
+  <div class="row"><div><label for="d-q">Find a Team Member</label><input id="d-q" value="${esc(dq)}" placeholder="Name or ID"></div>
+    <div style="flex:0 0 auto"><button class="btn sec" id="d-csv">Download as CSV</button></div></div>
+  <h2>Finished Team Members</h2>
+  <div id="d-list"></div>
+  <h2 style="margin-top:24px">Task log</h2>
+  <div id="d-log"></div>`;
+  $('#d-q').oninput = ev => { dq = ev.target.value; doneRender(); };
+  doneRender();
+}
+function doneMatch() {
+  const emps = DONE.emps.filter(e => !dq || (nameOf(e) + ' ' + e.id).toLowerCase().includes(dq.toLowerCase()));
+  const ids = new Set(emps.map(e => e.id));
+  return { emps, rows: DONE.rows.filter(r => ids.has(r.eid)) };
 }
 function doneRender() {
-  const emps = DONE.emps;
-  if (dsel && !emps.some(e => e.id === dsel)) dsel = '';
-  const rows = dsel ? DONE.rows.filter(r => r.eid === dsel) : DONE.rows;
-  if (!emps.length) { $('#dv').innerHTML = '<div class="empty">No one is marked as finished.</div>'; return; }
-  $('#dv').innerHTML = `
-  <h2>Finished Team Members</h2>
-  <div class="scroll"><table><thead><tr><th>Team Member</th><th>ID</th><th>Tasks logged</th><th>Last logged</th><th></th></tr></thead><tbody>
+  const { emps, rows } = doneMatch();
+  $('#d-list').innerHTML = emps.length ? `<div class="scroll" style="max-height:50vh"><table><thead><tr><th>Team Member</th><th>ID</th><th>Tasks logged</th><th>Last logged</th><th></th></tr></thead><tbody>
   ${emps.map(e => `<tr><td>${esc(nameOf(e))}</td><td>${esc(e.id)}</td><td>${e.total}</td><td>${fmtD(e.lastDate)}</td>
     <td>${ME.isAdmin ? `<button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button>` : ''}</td></tr>`).join('')}
-  </tbody></table></div>
-  <h2 style="margin-top:24px">Task log</h2>
-  <div class="row"><div><label for="d-who">Team Member</label><select id="d-who"><option value="">All finished Team Members</option>
-    ${emps.map(e => `<option value="${esc(e.id)}" ${e.id === dsel ? 'selected' : ''}>${esc(nameOf(e))} (${esc(e.id)})</option>`).join('')}</select></div>
-    <div style="flex:0 0 auto"><button class="btn sec" id="d-csv" ${rows.length ? '' : 'disabled'}>Download as CSV</button></div></div>
-  ${rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
+  </tbody></table></div><p class="hint">Showing ${emps.length} of ${DONE.emps.length} finished Team Members.</p>`
+  : '<div class="empty">No finished Team Members match that search.</div>';
+  $('#d-log').innerHTML = rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${fmtD(r.date)}</td><td>${esc(r.trainee)}</td><td>${esc(r.eid)}</td><td>${esc(TMAP[r.task] ? TMAP[r.task].label : r.task)}</td>
       <td>${r.io === 'IN' ? 'Arrival' : 'Departure'}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
       <td>${r.week}</td><td>${esc(r.trainer)}</td><td>${esc(r.notes)}</td></tr>`).join('')}
-  </tbody></table></div>` : '<div class="empty">No tasks were logged for this Team Member.</div>'}`;
-  $('#d-who').onchange = ev => { dsel = ev.target.value; doneRender(); };
-  $('#d-csv').onclick = () => downloadCsv(rows, dsel ? 'completed-' + dsel : 'completed-trainees');
-  app.querySelectorAll('[data-react]').forEach(b => b.onclick = async () => {
+  </tbody></table></div>` : `<div class="empty">${emps.length ? 'No tasks were logged for these Team Members.' : 'No tasks match that search.'}</div>`;
+  const csv = $('#d-csv');
+  csv.disabled = !rows.length;
+  csv.onclick = () => downloadCsv(rows, emps.length === 1 ? 'completed-' + emps[0].id : 'completed-trainees');
+  $('#d-list').querySelectorAll('[data-react]').forEach(b => b.onclick = async () => {
     const e = DONE.emps.find(x => x.id === b.dataset.react);
     if (!confirm(`Put ${nameOf(e)} back in training? They'll show up again on Submit tasks and View submissions.`)) return;
     b.disabled = true;
