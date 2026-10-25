@@ -43,10 +43,34 @@ app.http('employees', {
 
 // PUT edit a trainee: name, employee ID, and/or Active (in training vs. completed).
 // Fields left out of the body stay as they are. Changing the ID moves all of their logged tasks to the new ID.
+// DELETE removes a completed trainee and every task logged for them. Only trainees on the Completed page can be deleted.
 app.http('employeeEdit', {
-  methods: ['PUT'], authLevel: 'anonymous', route: 'employees/{id}',
+  methods: ['PUT', 'DELETE'], authLevel: 'anonymous', route: 'employees/{id}',
   handler: secured(async (req, ctx, user) => {
     if (!user.isAdmin) return json(403, { error: 'Only supervisors can edit trainee details.' });
+    if (req.method === 'DELETE') {
+      const id = String(req.params.id || '');
+      const pool = await db();
+      const cur = await pool.request().input('id', sql.VarChar(20), id).input('st', sql.VarChar(5), user.station)
+        .query(`SELECT Active FROM ${user.t.emp} WHERE EmployeeId=@id AND Station=@st`);
+      if (!cur.recordset.length) return json(404, { error: 'That Team Member was already deleted.' });
+      if (cur.recordset[0].Active) return json(409, { error: 'Move this Team Member to Completed before deleting them.' });
+      const tx = new sql.Transaction(pool);
+      await tx.begin();
+      let tasks = 0;
+      try {
+        const d = await new sql.Request(tx).input('id', sql.VarChar(20), id).query(`DELETE FROM ${user.t.log} WHERE EmployeeId=@id`);
+        tasks = d.rowsAffected[0];
+        await new sql.Request(tx).input('id', sql.VarChar(20), id).input('st', sql.VarChar(5), user.station)
+          .query(`DELETE FROM ${user.t.emp} WHERE EmployeeId=@id AND Station=@st`);
+        await tx.commit();
+      } catch (err) {
+        await tx.rollback();
+        throw err;
+      }
+      ctx.log(`Deleted ${user.program} trainee ${id} at ${user.station} with ${tasks} task rows, by ${user.email}`);
+      return json(200, { ok: true, tasks });
+    }
     const b = await req.json().catch(() => ({}));
     const oldId = String(req.params.id || '');
     const first = clean(b.first, 60), last = clean(b.last, 60);

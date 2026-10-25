@@ -807,7 +807,7 @@ function doneRender() {
   const { emps, rows } = doneMatch();
   $('#d-list').innerHTML = emps.length ? `<div class="scroll" style="max-height:50vh"><table><thead><tr><th>Team Member</th><th>ID</th><th>Tasks logged</th><th>Last logged</th><th></th></tr></thead><tbody>
   ${emps.map(e => `<tr><td>${esc(nameOf(e))}</td><td>${esc(e.id)}</td><td>${e.total}</td><td>${fmtD(e.lastDate)}</td>
-    <td>${ME.isAdmin ? `<button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button>` : ''}</td></tr>`).join('')}
+    <td>${ME.isAdmin ? `<div class="actions sm" style="margin:0;flex-wrap:nowrap"><button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button><button class="btn warn" style="min-height:36px;padding:6px 12px" data-del-emp="${esc(e.id)}">Delete</button></div>` : ''}</td></tr>`).join('')}
   </tbody></table></div><p class="hint">Showing ${emps.length} of ${DONE.emps.length} finished Team Members.</p>`
   : '<div class="empty">No finished Team Members match that search.</div>';
   $('#d-log').innerHTML = rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
@@ -818,6 +818,17 @@ function doneRender() {
   const csv = $('#d-csv');
   csv.disabled = !rows.length;
   csv.onclick = () => downloadCsv(rows, emps.length === 1 ? 'completed-' + emps[0].id : 'completed-trainees');
+  $('#d-list').querySelectorAll('[data-del-emp]').forEach(b => b.onclick = async () => {
+    const e = DONE.emps.find(x => x.id === b.dataset.delEmp);
+    const n = DONE.rows.filter(r => r.eid === e.id).length;
+    if (!confirm(`Delete ${nameOf(e)} (ID ${e.id}) and all ${n} of their logged task${n === 1 ? '' : 's'}? This can’t be undone.`)) return;
+    b.disabled = true;
+    try {
+      await api('employees/' + encodeURIComponent(e.id), { method: 'DELETE' });
+      delete SUM[e.id]; PROG = null; await reloadEmps();
+      toast('Deleted ' + nameOf(e)); vDone();
+    } catch (x) { fail(x); b.disabled = false; }
+  });
   $('#d-list').querySelectorAll('[data-react]').forEach(b => b.onclick = async () => {
     const e = DONE.emps.find(x => x.id === b.dataset.react);
     if (!confirm(`Put ${nameOf(e)} back in training? They'll show up again on Submit tasks and View submissions.`)) return;
