@@ -107,9 +107,10 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .mx td.c{text-align:center;font-weight:600;padding:8px 2px}
 .mx td.c.tot,.mx th.tot{font-weight:800}
 /* The grid gets a little more width than the rest of the page so every task and the Total fit */
-.gwide{width:min(1200px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+.gwide{width:fit-content;min-width:100%;max-width:min(1200px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+.mx{width:auto;min-width:100%}
 /* A very long name scrolls inside its own cell instead of widening the column */
-.mx .gname{display:inline-block;max-width:160px;overflow-x:auto;white-space:nowrap;vertical-align:bottom;scrollbar-width:none}
+.mx .gname{display:inline-block;max-width:185px;overflow-x:auto;white-space:nowrap;vertical-align:bottom;scrollbar-width:none}
 .mx th{z-index:3}
 .mx td.c.hi{background:color-mix(in srgb,var(--sign) 55%,transparent);color:var(--signink)}
 .mx td.c.lo{color:var(--muted)}
