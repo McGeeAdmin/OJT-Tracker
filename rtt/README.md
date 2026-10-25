@@ -75,9 +75,10 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 
 Each station is an **app role** on the Training Tracker app registration (value `SEA`, `PDX`…), and each station's Entra group is assigned to its role under Enterprise applications → Users and groups. At sign-in, Static Web Apps calls `GetRoles` (`api/src/functions/roles.js`), which turns those roles into `station_sea`, `station_pdx`… Every API call is limited to the station the page is showing, and the server refuses any station the user isn't in.
 
-- Adding a station: create an app role whose value is the station code, then assign that station's group to it. No code or setting changes.
+- Adding a station: create an app role whose value is the station code, assign that station's group to it, and add the code to the STATIONS setting so admins can see it.
 - A group that should see several stations (corporate, regional) gets assigned to each of those roles.
+- The **ADMIN** app role can switch to every station listed in the Function App setting **STATIONS** (`SEA,PDX,LAX`). Add a new station's code there as well as creating its app role.
 - Only direct members of an assigned group get the role. Members of groups nested inside it don't.
-- People with more than one station get a station switch in the header.
+- Admins and people with more than one station pick the station from a dropdown in the header, where the station name is.
 - Role changes take effect the next time the person signs out and back in.
 - Completed trainees and their submissions show only on the Completed page.

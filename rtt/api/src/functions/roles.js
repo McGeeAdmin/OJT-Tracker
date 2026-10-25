@@ -1,10 +1,8 @@
 const { app } = require('@azure/functions');
 
-// Static Web Apps calls this once at each sign-in (see "rolesSource" in staticwebapp.config.json).
-// It turns the app roles the user has in Entra (SEA, PDX, ANC…) into Static Web Apps roles
-// (station_sea, station_pdx…). Roles are created under App registrations → App roles, and given to
-// groups under Enterprise applications → Users and groups. Nothing to configure here.
 const ROLE_CLAIMS = ['roles', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+const NOT_STATIONS = new Set(['ADMIN']);
+const isCode = s => /^[A-Z0-9]{2,5}$/.test(s) && !NOT_STATIONS.has(s);
 
 app.http('GetRoles', {
   methods: ['POST'], authLevel: 'anonymous', route: 'GetRoles',
@@ -12,8 +10,12 @@ app.http('GetRoles', {
     const b = await req.json().catch(() => ({}));
     const claims = Array.isArray(b.claims) ? b.claims : [];
     const appRoles = claims.filter(c => ROLE_CLAIMS.includes(c.typ)).map(c => String(c.val).trim().toUpperCase());
-    const stations = [...new Set(appRoles.filter(r => /^[A-Z0-9]{2,5}$/.test(r)))];
-    const roles = stations.map(s => 'station_' + s.toLowerCase());
+    const isAdmin = appRoles.includes('ADMIN');
+    const stations = new Set(appRoles.filter(isCode));
+    if (isAdmin) String(process.env.STATIONS || '').split(',').map(s => s.trim().toUpperCase()).filter(isCode).forEach(s => stations.add(s));
+    const roles = [...stations].sort().map(s => 'station_' + s.toLowerCase());
+    if (isAdmin) roles.push('admin');
+    if (isAdmin && !process.env.STATIONS) ctx.warn('GetRoles: ADMIN signed in but the STATIONS setting is empty, so they only get their own station roles.');
     ctx.log(`GetRoles: ${b.userDetails || 'unknown user'} -> ${roles.join(', ') || 'no station'} (Entra roles: ${appRoles.join(', ') || 'none'})`);
     return { status: 200, jsonBody: { roles } };
   }

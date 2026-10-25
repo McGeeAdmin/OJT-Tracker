@@ -4,6 +4,7 @@
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AzureWebJobsStorage": "",
     "SQL_SERVER": "mcg-sql-01.database.windows.net",
-    "SQL_DATABASE": "onboarding"
+    "SQL_DATABASE": "onboarding",
+    "STATIONS": "SEA,PDX,LAX"
   }
 }

@@ -118,7 +118,9 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .me a{color:var(--sign)}
 .loading{padding:40px;text-align:center;color:var(--muted)}
 .proto{font-size:13px;color:var(--muted);margin-top:30px}
-.me select{width:auto;min-height:36px;padding:4px 8px;background:var(--hdr);color:var(--hdrtext);border:2px solid var(--sign);font:700 16px/1 var(--cond)}
+.brand{display:flex;align-items:center;gap:6px}
+.brand select{width:auto;min-height:0;padding:2px 22px 2px 4px;margin:-2px 0;border:0;border-radius:3px;background:rgba(255,255,255,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 6px center;color:var(--hdrtext);font:700 22px/1 var(--cond);letter-spacing:.02em;-webkit-appearance:none;appearance:none;cursor:pointer}
+.brand select option{color:#17232F;background:#fff}
 .msel{position:relative}
 .msel summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 12px;min-height:46px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:600}
 .msel summary::-webkit-details-marker{display:none}
@@ -637,12 +639,13 @@ function doneRender() {
 
 /* ---------- STATION ---------- */
 function showStation() {
-  $('#brand').textContent = STATION + ' OJT TRACKER';
   document.title = STATION + ' OJT Tracker';
-  const pick = ME.stations.length > 1
-    ? `<select id="st-pick" aria-label="Station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : '';
-  $('#me').innerHTML = `${pick}${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
-  if (pick) $('#st-pick').onchange = ev => switchStation(ev.target.value);
+  const b = $('#brand');
+  if (ME.stations.length > 1) {
+    b.innerHTML = `<select id="st-pick" aria-label="Station" title="Switch station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><span>OJT TRACKER</span>`;
+    $('#st-pick').onchange = ev => switchStation(ev.target.value);
+  } else b.textContent = STATION + ' OJT TRACKER';
+  $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
 }
 async function switchStation(st) {
   STATION = st; try { localStorage.setItem('rtt-station', st); } catch (e) {}
