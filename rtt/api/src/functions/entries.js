@@ -29,14 +29,14 @@ app.http('entries', {
       r.input('top', sql.Int, top);
       const res = await r.query(`
         SELECT TOP (@top) t.Id AS id, t.EntryGroupId AS grp, CONVERT(char(5), t.CreatedAt, 108) AS timeUtc, CONVERT(char(10), t.LogDate, 23) AS date, t.EmployeeId AS eid,
-               e.FirstName + ' ' + e.LastName AS trainee, t.TaskCode AS task, RTRIM(t.Phase) AS io, t.Week AS week,
+               e.FirstName + ' ' + e.LastName AS trainee, e.FirstName AS first, e.LastName AS last, t.TaskCode AS task, RTRIM(t.Phase) AS io, t.Week AS week,
                t.Gate AS gate, t.Flight AS flight, t.Tail AS tail, t.Notes AS notes,
                t.TrainerName AS trainer, t.TrainerEmail AS trainerEmail
-        FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+        FROM ${user.t.log} t JOIN ${user.t.emp} e ON e.EmployeeId = t.EmployeeId
         WHERE ${where.join(' AND ')}
         ORDER BY t.LogDate DESC, t.Id DESC`);
       const trainers = await pool.request().input('st', sql.VarChar(5), user.station).query(`
-        SELECT DISTINCT t.TrainerName AS name FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+        SELECT DISTINCT t.TrainerName AS name FROM ${user.t.log} t JOIN ${user.t.emp} e ON e.EmployeeId = t.EmployeeId
         WHERE e.Station = @st ORDER BY t.TrainerName`);
       return json(200, { rows: res.recordset, trainers: trainers.recordset.map(t => t.name) });
     }
@@ -47,17 +47,18 @@ app.http('entries', {
     const gate = clean(b.gate, 10), flight = clean(b.flight, 10), tail = clean(b.tail, 12);
     if (!isDate(b.date)) return bad('Pick a date.');
     if (!clean(b.employeeId, 20)) return bad('Pick a trainee.');
-    if (!['IN', 'OUT'].includes(b.phase)) return bad('Choose arrival or departure.');
+    const list = TASKS[user.program].filter(t => !t.hidden);
+    if (!list.some(t => t.phase === b.phase)) return bad('Choose arrival, departure or push.');
     if (![1, 2].includes(Number(b.week))) return bad('Choose week 1 or week 2.');
     if (!gate) return bad('Enter the gate.');
     if (!flight && !tail) return bad('Enter the flight number or tail number.');
     if (!tasks.length) return bad('Select at least one task.');
 
-    const codes = new Set(TASKS.filter(t => !t.hidden).map(t => t.code));
+    const codes = new Set(list.map(t => t.code));
     if (tasks.some(t => !codes.has(t))) return bad('One of the selected tasks is no longer on the list. Reload the page and try again.');
 
     const emp = await pool.request().input('id', sql.VarChar(20), b.employeeId).input('st', sql.VarChar(5), user.station)
-      .query('SELECT 1 FROM dbo.ojt_employees WHERE EmployeeId = @id AND Station = @st');
+      .query(`SELECT 1 FROM ${user.t.emp} WHERE EmployeeId = @id AND Station = @st`);
     if (!emp.recordset.length) return bad('That trainee is not on the list. Add them first.');
 
     const group = crypto.randomUUID();
@@ -68,13 +69,13 @@ app.http('entries', {
         await new sql.Request(tx)
           .input('g', sql.UniqueIdentifier, group).input('d', sql.Date, b.date)
           .input('e', sql.VarChar(20), b.employeeId).input('t', sql.VarChar(40), task)
-          .input('p', sql.Char(3), b.phase).input('w', sql.TinyInt, Number(b.week))
+          .input('p', sql.VarChar(4), b.phase).input('w', sql.TinyInt, Number(b.week))
           .input('gate', sql.NVarChar(10), gate.toUpperCase())
           .input('fl', sql.NVarChar(10), flight && flight.toUpperCase().replace(/^AS/, ''))
           .input('tail', sql.NVarChar(12), tail && tail.toUpperCase())
           .input('n', sql.NVarChar(500), clean(b.notes, 500))
           .input('te', sql.NVarChar(200), user.email).input('tn', sql.NVarChar(120), user.name)
-          .query(`INSERT INTO dbo.ojt_tasklog (EntryGroupId, LogDate, EmployeeId, TaskCode, Phase, Week, Gate, Flight, Tail, Notes, TrainerEmail, TrainerName)
+          .query(`INSERT INTO ${user.t.log} (EntryGroupId, LogDate, EmployeeId, TaskCode, Phase, Week, Gate, Flight, Tail, Notes, TrainerEmail, TrainerName)
                   VALUES (@g, @d, @e, @t, @p, @w, @gate, @fl, @tail, @n, @te, @tn)`);
       }
       await tx.commit();
@@ -94,12 +95,12 @@ app.http('entryDelete', {
     const id = parseInt(req.params.id, 10);
     if (!id) return bad('Invalid line.');
     const r = await pool.request().input('id', sql.Int, id).input('st', sql.VarChar(5), user.station).query(`
-      SELECT t.TrainerEmail FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+      SELECT t.TrainerEmail FROM ${user.t.log} t JOIN ${user.t.emp} e ON e.EmployeeId = t.EmployeeId
       WHERE t.Id = @id AND e.Station = @st`);
     if (!r.recordset.length) return json(404, { error: 'That line was already deleted.' });
     if (!user.isAdmin && r.recordset[0].TrainerEmail.toLowerCase() !== user.email)
       return json(403, { error: 'You can only delete lines you logged. Ask a supervisor to delete this one.' });
-    await pool.request().input('id', sql.Int, id).query('DELETE FROM dbo.ojt_tasklog WHERE Id = @id');
+    await pool.request().input('id', sql.Int, id).query(`DELETE FROM ${user.t.log} WHERE Id = @id`);
     return json(200, { ok: true });
   })
 });
@@ -112,12 +113,12 @@ app.http('submissionDelete', {
     if (!/^[0-9a-f-]{36}$/i.test(grp)) return bad('Invalid submission.');
     const pool = await db();
     const r = await pool.request().input('g', sql.UniqueIdentifier, grp).input('st', sql.VarChar(5), user.station).query(`
-      SELECT TOP 1 t.TrainerEmail FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+      SELECT TOP 1 t.TrainerEmail FROM ${user.t.log} t JOIN ${user.t.emp} e ON e.EmployeeId = t.EmployeeId
       WHERE t.EntryGroupId = @g AND e.Station = @st`);
     if (!r.recordset.length) return json(404, { error: 'That submission was already deleted.' });
     if (!user.isAdmin && r.recordset[0].TrainerEmail.toLowerCase() !== user.email)
       return json(403, { error: 'You can only delete submissions you made. Ask a supervisor to delete this one.' });
-    const d = await pool.request().input('g', sql.UniqueIdentifier, grp).query('DELETE FROM dbo.ojt_tasklog WHERE EntryGroupId = @g');
+    const d = await pool.request().input('g', sql.UniqueIdentifier, grp).query(`DELETE FROM ${user.t.log} WHERE EntryGroupId = @g`);
     return json(200, { deleted: d.rowsAffected[0] });
   })
 });

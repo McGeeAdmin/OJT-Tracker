@@ -10,6 +10,12 @@ const dbConfig = {
   pool: { max: 10, min: 0, idleTimeoutMillis: 30000 }
 };
 
+// Each training program has its own tables. Names are fixed here (never taken from the request), so they're safe to put in SQL.
+const PROGRAMS = {
+  OJT: { emp: 'dbo.ojt_employees', log: 'dbo.ojt_tasklog' },
+  LIT: { emp: 'dbo.lit_employees', log: 'dbo.lit_tasklog' }
+};
+
 let poolPromise = null;
 const WAKE_WINDOW_MS = 40000;   // stay under Static Web Apps' ~45 s request limit
 
@@ -31,7 +37,7 @@ async function db() {
   }
 }
 
-// Every request runs for exactly one station (user.station). The page sends the station it is showing
+// Every request runs for exactly one station (user.station) and one program (user.program). The page sends the station it is showing
 // in the X-Station header; the server only accepts a station the user's Entra groups give them.
 function secured(handler) {
   return async (request, context) => {
@@ -43,6 +49,11 @@ function secured(handler) {
     if (asked && !user.stations.includes(asked))
       return json(403, { error: `You don’t have access to ${asked}. Sign out and back in if your station just changed.`, badStation: true });
     user.station = asked || user.stations[0];
+    // The page also sends which program it is showing (OJT or LIT) in X-Program.
+    const program = String(request.headers.get('x-program') || 'OJT').trim().toUpperCase();
+    if (!PROGRAMS[program]) return json(400, { error: `There is no ${program} tracker. Reload the page.` });
+    user.program = program;
+    user.t = PROGRAMS[program];
     try {
       return await handler(request, context, user);
     } catch (err) {
@@ -80,4 +91,4 @@ const clean = (v, max) => {
 };
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 
-module.exports = { sql, db, json, bad, secured, clean, isDate };
+module.exports = { sql, db, json, bad, secured, clean, isDate, PROGRAMS };

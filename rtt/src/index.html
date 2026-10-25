@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#E6E9EC; --panel:#FFFFFF; --ink:#17232F; --muted:#56636F; --line:#CBD1D7; --soft:#F2F4F6;
-  --sign:#FFFFFF; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --ok:#2A7F52; --danger:#B3261E;
+  --sign:#FFFFFF; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --push:#7A4CB0; --ok:#2A7F52; --danger:#B3261E;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --hdr:#0B3D6E; --hdrtext:#FFFFFF;
@@ -18,9 +18,9 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1A2129; --panel:#232C36; --ink:#E7EBEF; --muted:#9AA6B2; --line:#39444F; --soft:#2B3540;
-  --arr:#6FA3E0; --dep:#5EC08C; --ok:#5EC08C; --danger:#F2867E;}}
+  --arr:#6FA3E0; --dep:#5EC08C; --push:#B596E8; --ok:#5EC08C; --danger:#F2867E;}}
 :root[data-theme="dark"]{--bg:#1A2129; --panel:#232C36; --ink:#E7EBEF; --muted:#9AA6B2; --line:#39444F; --soft:#2B3540;
-  --arr:#6FA3E0; --dep:#5EC08C; --ok:#5EC08C; --danger:#F2867E;}
+  --arr:#6FA3E0; --dep:#5EC08C; --push:#B596E8; --ok:#5EC08C; --danger:#F2867E;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 .grid>*{min-width:0}
@@ -59,6 +59,7 @@ input[readonly]{background:var(--soft);color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .seg button.in[aria-pressed="true"]{background:var(--arr);color:#fff}
 .seg button.out[aria-pressed="true"]{background:var(--dep);color:#fff}
+.seg button.push[aria-pressed="true"]{background:var(--push);color:#fff}
 .who{display:flex;gap:10px;align-items:stretch;margin-top:8px;flex-wrap:wrap}
 .sign{display:inline-flex;align-items:center;font:700 20px/1 var(--cond);letter-spacing:.03em;padding:8px 12px;border:2px solid var(--sign);background:var(--signink);color:var(--sign)}
 .sign.y{background:var(--sign);color:var(--signink);border-color:var(--signink)}
@@ -111,7 +112,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
 .row>div{flex:1;min-width:150px}
 .pill{font-size:12px;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff}
-.pill.IN{background:var(--arr)} .pill.OUT{background:var(--dep)}
+.pill.IN{background:var(--arr)} .pill.OUT{background:var(--dep)} .pill.PUSH{background:var(--push)}
 .link{background:none;border:0;color:var(--danger);cursor:pointer;font-weight:600;padding:4px}
 .empty{padding:30px 10px;text-align:center;color:var(--muted)}
 .me{margin-left:auto;color:#E9E4D0;font-size:14px;display:flex;gap:10px;align-items:center}
@@ -148,12 +149,23 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .prow .last{color:var(--muted);font-weight:500}
 .mx td.c.has{font-weight:700}
 .ph{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:4px}
-.ph.IN{background:var(--arr)}.ph.OUT{background:var(--dep)}
+.ph.IN{background:var(--arr)}.ph.OUT{background:var(--dep)}.ph.PUSH{background:var(--push)}
 .filters{margin-bottom:6px}
 .filters summary{font:700 18px/1.2 var(--cond);cursor:pointer;min-height:28px}
 .day{font:700 17px/1.2 var(--cond);margin:16px 0 6px;color:var(--muted)}
 .sub-card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--dep);border-radius:4px;padding:8px 12px;margin-bottom:6px}
 .sub-card.IN{border-left-color:var(--arr)}
+.sub-card.PUSH{border-left-color:var(--push)}
+/* Shift report */
+.rem{margin-bottom:12px}
+.rem label small{color:var(--muted);font-weight:500}
+.rep-wrap{background:#fff;color:#1A1A1A;border:1px solid var(--line);border-radius:4px;padding:16px;overflow-x:auto}
+.saved{min-height:20px}
+@media print{
+  body *{visibility:hidden}
+  #rep-preview,#rep-preview *{visibility:visible}
+  #rep-preview{position:absolute;left:0;top:0;width:100%}
+}
 .sc-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .sc-top .name{color:var(--ink);font-weight:700;font-size:16px;padding:0;text-align:left}
 .sc-top small{color:var(--muted)}
@@ -169,7 +181,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
   .bar{padding:10px 14px}
   .me{font-size:13px}
   nav{position:fixed;left:0;right:0;bottom:0;background:var(--hdr);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:6;border-top:2px solid var(--sign)}
-  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:16px;border-bottom:0;padding:6px}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:14px;border-bottom:0;padding:6px 2px;text-align:center}
   nav button[aria-current="page"]{background:rgba(255,199,44,.12)}
   .ico{display:block;font-size:20px;line-height:1}
   main{padding-bottom:110px}
@@ -186,6 +198,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 <nav aria-label="Main">
 <button data-v="log" aria-current="page"><span class="ico" aria-hidden="true">＋</span>Submit tasks</button>
 <button data-v="view"><span class="ico" aria-hidden="true">☰</span>View submissions</button>
+<button data-v="report"><span class="ico" aria-hidden="true">✉</span>Shift report</button>
 <button data-v="done"><span class="ico" aria-hidden="true">✓</span>Completed</button>
 </nav><div class="me" id="me"></div></div></header>
 <main id="app"><div class="loading">Signing you in…</div></main>
@@ -194,12 +207,13 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 <script>
 /* ---------- API ---------- */
 let STATION = '';                 // station the page is showing; the server checks it against the user's groups
+let PROGRAM = 'OJT', PROGRAMS = ['OJT'];   // training program the page is showing (OJT or LIT); each has its own trainees and tasks
 async function api(path, opts = {}, tries = 0) {
   let r;
   try {
     r = await fetch('/api/' + path, {
       method: opts.method || 'GET',
-      headers: STATION ? { 'Content-Type': 'application/json', 'X-Station': STATION } : { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json', 'X-Program': PROGRAM }, STATION ? { 'X-Station': STATION } : {}),
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
   } catch (e) { throw new Error('Can’t reach the server. Check your connection and try again.'); }
@@ -244,6 +258,15 @@ function guessWeek(s) {
   return String(s.latestWeek || 1);
 }
 async function reloadEmps() { EMPS = await api('employees'); }
+// Parts of a turn. OJT has arrival and departure; LIT also has push.
+const PH = { IN: 'Arrival', OUT: 'Departure', PUSH: 'Push' };
+const PHBTN = { IN: 'Arrival (In)', OUT: 'Departure (Out)', PUSH: 'Push' };
+const PHVAR = { IN: '--arr', OUT: '--dep', PUSH: '--push' };
+const PHCLS = { IN: 'in', OUT: 'out', PUSH: 'push' };
+const phases = () => ['IN', 'OUT', 'PUSH'].filter(p => TASKS.some(t => t.phase === p));
+const phName = p => PH[p] || p;
+const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
 /* ---------- LOG ---------- */
 let F = null, TODAY = [];
@@ -260,6 +283,7 @@ async function loadToday() {
 }
 function vLog() {
   if (!F) freshForm();
+  if (!phases().includes(F.io)) F.io = phases().includes('OUT') ? 'OUT' : (phases()[0] || 'OUT');
   const e = empBy(F.eid), s = F.eid ? SUM[F.eid] : null, c = s ? s.counts : {};
   app.innerHTML = `<h1>Submit tasks</h1><p class="sub">One entry per TM per flight. Pick everything they did on this turn.</p>
   <div class="panel grid">
@@ -279,8 +303,8 @@ function vLog() {
     <div><label>Training week</label><div class="seg" role="group" aria-label="Training week">
       <button data-week="1" aria-pressed="${F.week === '1'}">Week 1</button><button data-week="2" aria-pressed="${F.week === '2'}">Week 2</button></div>
       ${e && s && s.records.length ? '<p class="hint">Filled in from their training record. Change it if it’s wrong.</p>' : ''}</div>
-    <div><label>Arrival or departure</label><div class="seg" role="group" aria-label="Arrival or departure">
-      <button class="in" data-io="IN" aria-pressed="${F.io === 'IN'}">Arrival (In)</button><button class="out" data-io="OUT" aria-pressed="${F.io === 'OUT'}">Departure (Out)</button></div></div>
+    <div><label>${phases().length > 2 ? 'Arrival, departure or push' : 'Arrival or departure'}</label><div class="seg" role="group" aria-label="Part of the turn">
+      ${phases().map(p => `<button class="${PHCLS[p]}" data-io="${p}" aria-pressed="${F.io === p}">${PHBTN[p]}</button>`).join('')}</div></div>
    </div>
    <div>
     <div class="grid g4">
@@ -312,9 +336,9 @@ function renderTasks(c) {
   const box = $('#tasks');
   const list = TASKS.filter(t => t.phase === F.io);
   const other = TASKS.filter(t => t.phase !== F.io && F.tasks.has(t.code));
-  box.innerHTML = `<div class="phase"><i style="background:var(${F.io === 'IN' ? '--arr' : '--dep'})"></i>${F.io === 'IN' ? 'Arrival' : 'Departure'} tasks completed</div>
+  box.innerHTML = `<div class="phase"><i style="background:var(${PHVAR[F.io]})"></i>${phName(F.io)} tasks completed</div>
    <div class="tasks">${list.map(t => `<button class="chip" data-t="${t.code}" aria-pressed="${F.tasks.has(t.code)}"><span class="l">${esc(t.label)}</span>${F.eid ? `<span class="n">${c[t.code] || 0}×</span>` : ''}</button>`).join('')}</div>
-   ${other.length ? `<p class="hint">Also selected from ${F.io === 'IN' ? 'departure' : 'arrival'}: ${other.map(t => esc(t.label)).join(', ')}</p>` : ''}
+   ${other.length ? `<p class="hint">Also selected from another part of the turn: ${other.map(t => esc(t.label) + ' (' + phName(t.phase).toLowerCase() + ')').join(', ')}</p>` : ''}
    <p class="hint">${F.eid ? 'Numbers show how many times this team member has done each task so far.' : 'Pick a team member to see how many times they’ve done each task.'}</p>`;
   box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
     const id = b.dataset.t; F.tasks.has(id) ? F.tasks.delete(id) : F.tasks.add(id);
@@ -444,8 +468,7 @@ async function detail() {
    <div class="stats"><div><b>${done} of ${TASKS.length}</b><span>tasks done at least once</span></div><div><b>${rs.length}</b><span>tasks logged</span></div>
    <div><b>${fmtD(s.firstDate)}</b><span>first logged</span></div><div><b>Week ${guessWeek(s)}</b><span>current</span></div></div>
    <p class="hint" style="margin-bottom:14px">Trained by ${s.trainers.map(esc).join(', ') || 'no one yet'}. Tap a task to see each time it was done.</p>
-   <div class="grid g2" style="gap:24px"><div><div class="phase"><i style="background:var(--arr)"></i>Arrival</div><div class="prog">${sec('IN')}</div></div>
-   <div><div class="phase"><i style="background:var(--dep)"></i>Departure</div><div class="prog">${sec('OUT')}</div></div></div>
+   <div class="grid g2" style="gap:24px">${phases().map(p => `<div><div class="phase"><i style="background:var(${PHVAR[p]})"></i>${phName(p)}</div><div class="prog">${sec(p)}</div></div>`).join('')}</div>
    <div class="actions sm"><button class="btn sm" id="log-this">Submit tasks for ${esc(e.first)}</button><button class="btn sec sm" id="see-subs">See ${esc(e.first)}’s submissions</button>${e.active ? `<button class="btn sec sm" id="finish-emp">Move to Completed</button>` : ''}${ME.isAdmin ? '<button class="btn sec sm" id="edit-emp">Edit Team Member</button>' : ''}</div>
    <div id="edit-box"></div>`;
   $('#back').onclick = () => { sel = null; oneView(); window.scrollTo(0, 0); };
@@ -507,9 +530,9 @@ function grid() {
   };
   const table = () => {
     const ids = GSEL.size && pool.some(e => GSEL.has(e.id)) ? pool.filter(e => GSEL.has(e.id)) : pool;
-    $('#g-table').innerHTML = `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${t.phase === 'IN' ? 'Arrival' : 'Departure'}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
+    $('#g-table').innerHTML = `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${phName(t.phase)}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
     <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small><button class="mini" data-fin="${esc(e.id)}" title="Move ${esc(nameOf(e))} to Completed">Completed?</button></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
-    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record, or Completed to move them to the Completed page.</p>`;
+    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure${phases().includes('PUSH') ? ', purple mark push' : ''}. Select a name to open their record, or Completed to move them to the Completed page.</p>`;
     $('#g-table').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
     $('#g-table').querySelectorAll('[data-fin]').forEach(b => b.onclick = async () => { b.disabled = true; if (await finishEmp(b.dataset.fin)) vView(); else b.disabled = false; });
   };
@@ -529,7 +552,7 @@ function vList() {
   $('#tv').innerHTML = `<details class="panel filters" ${innerWidth > 700 || active ? 'open' : ''}><summary>Filters${active ? ' (' + active + ' on)' : ''}</summary><div class="grid g4" style="margin-top:12px">
    <div><label for="h-who">Team Member</label><input id="h-who" value="${esc(H.who)}" placeholder="Name or ID"></div>
    <div><label for="h-tr">Trainer</label><select id="h-tr"><option value="">All trainers</option></select></div>
-   <div><label for="h-task">Task</label><select id="h-task"><option value="">All tasks</option>${TASKS.map(t => `<option value="${t.code}" ${t.code === H.task ? 'selected' : ''}>${esc(t.label)} (${t.phase === 'IN' ? 'arr' : 'dep'})</option>`).join('')}</select></div>
+   <div><label for="h-task">Task</label><select id="h-task"><option value="">All tasks</option>${TASKS.map(t => `<option value="${t.code}" ${t.code === H.task ? 'selected' : ''}>${esc(t.label)} (${phName(t.phase).toLowerCase()})</option>`).join('')}</select></div>
    <div><label for="h-from">From</label><input id="h-from" type="date" value="${H.from}"></div>
    <div><label for="h-to">To</label><input id="h-to" type="date" value="${H.to}"></div>
   </div><div class="actions" style="margin-top:12px"><button class="btn sec" id="clear">Clear filters</button><button class="btn sec" id="csv">Download as CSV</button></div></details>
@@ -566,7 +589,7 @@ function renderHist() {
     const hdr = g.date !== lastDate ? `<h3 class="day">${dayLabel(g.date)}</h3>` : ''; lastDate = g.date;
     const mine = g.trainerEmail.toLowerCase() === ME.email, canDel = ME.isAdmin || mine;
     return `${hdr}<article class="sub-card ${g.io}">
-      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small> <span class="pill ${g.io}">${g.io === 'IN' ? 'Arrival' : 'Departure'}</span></div>
+      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small> <span class="pill ${g.io}">${phName(g.io)}</span></div>
         <div class="sc-right"><span>by ${esc(g.trainer)}${mine ? ' (you)' : ''}</span>${canDel ? `<button class="link" data-del="${g.grp}">Delete</button>` : ''}</div></div>
       <div class="sc-line"><span>Gate <b>${esc(g.gate)}</b> &nbsp; Flight <b>${esc(g.flight) || '—'}</b> &nbsp; Tail <b>${esc(g.tail) || '—'}</b> &nbsp; Wk <b>${g.week}</b></span>
         <div class="sc-tasks">${g.tasks.map(t => `<span class="tag">${esc(TMAP[t] ? TMAP[t].label : t)}</span>`).join('')}</div></div>
@@ -599,11 +622,177 @@ function dayLabel(d) {
 function downloadCsv(rows, name) {
   const h = ['Date', 'EmployeeID', 'Team Member', 'Task', 'Phase', 'Gate', 'Flight', 'Tail', 'Week', 'Trainer', 'Notes'];
   const qv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const csv = [h.join(',')].concat(rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
+  const csv = [h.join(',')].concat(rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, phName(r.io), r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
   a.download = name + '-' + today() + '.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- SHIFT REPORT ---------- */
+// One report per trainer per day. Team Members and tasks come from what the trainer submitted that day;
+// Schedule, other training covered and remarks are typed here and kept only in this browser (no history on the server).
+let RD = null, RDATE = '';
+const DRAFT_DAYS = 7;
+const draftKey = () => 'rtt-report:' + PROGRAM + ':' + STATION + ':' + RD.date;
+function loadDraft() {
+  let d = {}; try { d = JSON.parse(lsGet(draftKey()) || '{}'); } catch (e) {}
+  RD.schedule = d.schedule != null ? d.schedule : lsGet('rtt-schedule');
+  RD.covered = d.covered || ''; RD.remarks = d.remarks || {};
+}
+function saveDraft() {
+  lsSet(draftKey(), JSON.stringify({ schedule: RD.schedule, covered: RD.covered, remarks: RD.remarks, at: Date.now() }));
+  if (RD.schedule) lsSet('rtt-schedule', RD.schedule);
+}
+// Clear drafts older than a week
+function pruneDrafts() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i); if (!k || !k.startsWith('rtt-report:')) continue;
+      let at = 0; try { at = JSON.parse(localStorage.getItem(k)).at || 0; } catch (e) {}
+      if (Date.now() - at > DRAFT_DAYS * 864e5) localStorage.removeItem(k);
+    }
+  } catch (e) {}
+}
+async function vReport() {
+  if (!RDATE) RDATE = today();
+  app.innerHTML = `<h1>Shift report</h1><p class="sub">Your end-of-shift report: who you trained today, the tasks they did, and your notes on each Team Member.</p>
+  <div class="panel grid">
+   <div class="grid g2">
+    <div><label>Trainer</label><input readonly value="${esc(ME.name)}"></div>
+    <div><label for="r-date">Date</label><input id="r-date" type="date" value="${RDATE}"></div>
+   </div>
+   <div id="r-body"><div class="loading">Loading…</div></div>
+  </div>`;
+  $('#r-date').onchange = ev => { RDATE = ev.target.value || today(); vReport(); };
+  const date = RDATE;
+  let d;
+  // Everything this trainer submitted that day, including Team Members already moved to Completed
+  try { d = await api('entries?mine=1&all=1&from=' + date + '&to=' + date + '&top=5000'); }
+  catch (e) { if ($('#r-body')) $('#r-body').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!$('#r-body') || date !== RDATE) return;   // user moved on while loading
+  d.rows.forEach(r => { r.io = String(r.io || '').trim(); });
+  RD = { date, rows: d.rows.slice().reverse() };
+  pruneDrafts(); loadDraft();
+  reportBody();
+}
+function reportTms() {
+  const m = new Map();
+  RD.rows.forEach(r => { if (!m.has(r.eid)) m.set(r.eid, { eid: r.eid, first: r.first, last: r.last, name: r.first + ' ' + r.last }); });
+  return [...m.values()].sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
+}
+function reportTasks() {
+  const by = {};
+  RD.rows.forEach(r => { const t = by[r.task] = by[r.task] || { io: r.io, who: {} }; t.who[r.eid] = (t.who[r.eid] || 0) + 1; });
+  const order = TASKS.map(t => t.code).concat(Object.keys(by).filter(c => !TMAP[c]));
+  return order.filter(c => by[c]).map(c => ({ label: TMAP[c] ? TMAP[c].label : c, phase: TMAP[c] ? TMAP[c].phase : by[c].io, who: by[c].who }));
+}
+function reportBody() {
+  const tms = reportTms();
+  $('#r-body').innerHTML = `
+   <div class="grid g2">
+    <div><label for="r-sched">Your schedule</label><input id="r-sched" value="${esc(RD.schedule)}" placeholder="0530-1630" maxlength="40"></div>
+    <div><label for="r-to">Email to</label><input id="r-to" type="email" multiple autocapitalize="off" value="${esc(lsGet('rtt-report-to'))}" placeholder="Separate addresses with commas"></div>
+   </div>
+   ${tms.length ? `<h2 style="margin-top:20px">Notes on each Team Member</h2>
+    ${tms.map(t => `<div class="rem"><label for="r-n-${esc(t.eid)}">${esc(t.name)} <small>ID ${esc(t.eid)}</small></label><textarea id="r-n-${esc(t.eid)}" data-rem="${esc(t.eid)}" maxlength="1000">${esc(RD.remarks[t.eid] || '')}</textarea></div>`).join('')}`
+   : `<div class="empty">You didn’t submit any tasks on ${fmtD(RD.date)}${PROGRAM === 'OJT' ? '' : ' in the ' + esc(PROGRAM) + ' tracker'}. Submit tasks first and your Team Members will show up here.</div>`}
+   <div><label for="r-cov">Other training covered (optional)</label><textarea id="r-cov" maxlength="2000" placeholder="Familiarization:&#10;Plane in general&#10;Water&#10;Air">${esc(RD.covered)}</textarea>
+    <p class="hint">One item per line. End a line with a colon, like “Familiarization:”, to make it a heading.</p></div>
+   <p class="hint">Your notes are kept on this ${innerWidth < 800 ? 'phone' : 'computer'} for ${DRAFT_DAYS} days so you can come back to them, then cleared. Send the report before you leave.</p>
+   <div class="actions" style="margin-top:4px">
+    <button class="btn" id="r-copy" ${tms.length ? '' : 'disabled'}>Copy report</button>
+    <button class="btn sec" id="r-mail" ${tms.length ? '' : 'disabled'}>Open email</button>
+    <button class="btn sec" id="r-print" ${tms.length ? '' : 'disabled'}>Print or save as PDF</button>
+   </div>
+   <p class="hint">Copy report keeps the tables: paste it into a new Outlook email. Open email starts an email with a plain-text version.</p>
+   <h2 style="margin-top:24px">Preview</h2>
+   <div class="rep-wrap"><div id="rep-preview">${reportHtml()}</div></div>`;
+  const changed = () => { $('#rep-preview').innerHTML = reportHtml(); saveDraft(); };
+  $('#r-sched').oninput = ev => { RD.schedule = ev.target.value; changed(); };
+  $('#r-cov').oninput = ev => { RD.covered = ev.target.value; changed(); };
+  app.querySelectorAll('[data-rem]').forEach(t => t.oninput = () => { RD.remarks[t.dataset.rem] = t.value; changed(); });
+  $('#r-to').oninput = ev => lsSet('rtt-report-to', ev.target.value.trim());
+  $('#r-copy').onclick = copyReport;
+  $('#r-mail').onclick = mailReport;
+  $('#r-print').onclick = () => window.print();
+}
+const longDate = d => { const x = new Date(d + 'T12:00'); return (x.getMonth() + 1) + '/' + x.getDate() + '/' + x.getFullYear() + ' ' + x.toLocaleDateString('en-US', { weekday: 'short' }); };
+function reportTitle() {
+  const wk = [...new Set(RD.rows.map(r => r.week))].sort();
+  return 'End of Shift Report for ' + (wk.length ? (wk.length > 1 ? 'Weeks ' : 'Week ') + wk.join(' & ') + ' ' : '') + PROGRAM;
+}
+// Lines ending in ":" are headings, the rest are bullets under them
+function coveredGroups() {
+  const out = []; let cur = null;
+  String(RD.covered || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+    if (/:$/.test(l)) { cur = { head: l, items: [] }; out.push(cur); }
+    else { if (!cur) { cur = { head: '', items: [] }; out.push(cur); } cur.items.push(l.replace(/^[-•*]\s*/, '')); }
+  });
+  return out;
+}
+// Email-ready HTML: inline styles only, light colors, so it looks the same pasted into Outlook
+function reportHtml() {
+  const tms = reportTms(), tasks = reportTasks(), nm = {};
+  tms.forEach(t => { nm[t.eid] = t.name; });
+  const F = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1A1A1A;';
+  const tbl = `border-collapse:collapse;${F}margin:0 0 18px;`;
+  const th = 'background:#E8963E;color:#1A1A1A;font-weight:700;padding:8px 12px;border:1px solid #A6A6A6;text-align:center;';
+  const td = 'padding:6px 12px;border:1px solid #A6A6A6;vertical-align:middle;';
+  const h = t => `<p style="${F}font-weight:700;font-size:15px;margin:0 0 6px">${esc(t)}</p>`;
+  const phs = ['IN', 'OUT', 'PUSH'].filter(p => tasks.some(t => t.phase === p));
+  const cov = coveredGroups();
+  return `<div style="${F}">
+   <p style="${F}font-size:18px;font-weight:700;margin:0 0 12px">${esc(reportTitle())}</p>
+   <table style="${tbl}"><tr>
+    <td style="${td}border-color:#1A1A1A">Trainer: ${esc(ME.name)}</td>
+    <td style="${td}border-color:#1A1A1A">Trainer schedule: ${esc(RD.schedule || '')}</td>
+    <td style="${td}border-color:#1A1A1A">Date: ${esc(longDate(RD.date))}</td>
+    <td style="${td}border-color:#1A1A1A">Station: ${esc(STATION)}</td></tr></table>
+   ${tms.length ? `<table style="${tbl}"><tr><th style="${th}">McGee No #</th><th style="${th}">First Name</th><th style="${th}">Last Name</th></tr>
+    ${tms.map(t => `<tr><td style="${td}text-align:center;font-weight:700">${esc(t.eid)}</td><td style="${td}text-align:center;font-weight:700">${esc(t.first)}</td><td style="${td}text-align:center;font-weight:700">${esc(t.last)}</td></tr>`).join('')}</table>` : ''}
+   ${tasks.length ? h('Tasks completed:') + `<table style="${tbl}"><tr><th style="${th}">Task</th><th style="${th}">Done by</th></tr>
+    ${phs.map(p => `<tr><td colspan="2" style="${td}background:#F2F2F2;font-weight:700">${esc(phName(p))}</td></tr>`
+      + tasks.filter(t => t.phase === p).map(t => `<tr><td style="${td}">${esc(t.label)}</td><td style="${td}">${Object.entries(t.who).map(([e, n]) => esc(nm[e] || e) + (n > 1 ? ' ×' + n : '')).join(', ')}</td></tr>`).join('')).join('')}</table>` : ''}
+   ${cov.map(g => (g.head ? h(g.head) : '') + `<ul style="${F}margin:0 0 14px;padding-left:24px">${g.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
+   ${tms.length ? h('Trainee Assessment:') + `<table style="${tbl}"><tr><th style="${th}">McGee No #</th><th style="${th}">Agent Name</th><th style="${th}">Remarks &amp; Comments</th></tr>
+    ${tms.map(t => `<tr><td style="${td}text-align:center;font-weight:700">${esc(t.eid)}</td><td style="${td}text-align:center;font-weight:700">${esc(t.name)}</td><td style="${td}min-width:280px;text-align:center">${esc(RD.remarks[t.eid] || '').replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>` : ''}
+  </div>`;
+}
+function reportText() {
+  const tms = reportTms(), tasks = reportTasks(), nm = {};
+  tms.forEach(t => { nm[t.eid] = t.name; });
+  const L = [reportTitle(), '', 'Trainer: ' + ME.name, 'Trainer schedule: ' + (RD.schedule || ''), 'Date: ' + longDate(RD.date), 'Station: ' + STATION, '', 'Team Members trained:'];
+  tms.forEach(t => L.push(t.eid + '  ' + t.name));
+  ['IN', 'OUT', 'PUSH'].forEach(p => {
+    const ts = tasks.filter(t => t.phase === p); if (!ts.length) return;
+    L.push('', phName(p) + ' tasks completed:');
+    ts.forEach(t => L.push('- ' + t.label + ': ' + Object.entries(t.who).map(([e, n]) => (nm[e] || e) + (n > 1 ? ' x' + n : '')).join(', ')));
+  });
+  coveredGroups().forEach(g => { L.push(''); if (g.head) L.push(g.head); g.items.forEach(i => L.push('- ' + i)); });
+  L.push('', 'Trainee assessment:');
+  tms.forEach(t => L.push(t.eid + ' ' + t.name + ': ' + (RD.remarks[t.eid] || '').replace(/\s*\n\s*/g, ' ')));
+  return L.join('\r\n');
+}
+async function copyReport() {
+  const html = reportHtml(), text = reportText();
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw new Error('no rich clipboard');
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
+  } catch (e) {
+    // Older browsers: select the preview and copy it the old way (also keeps the formatting)
+    const n = $('#rep-preview'), rg = document.createRange(), s = getSelection();
+    rg.selectNodeContents(n); s.removeAllRanges(); s.addRange(rg);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (x) {}
+    s.removeAllRanges();
+    if (!ok) { toast('Couldn’t copy. Select the preview, copy it, and paste it into an email.'); return; }
+  }
+  toast('Report copied. Paste it into a new email.');
+}
+function mailReport() {
+  const to = ($('#r-to').value || '').split(/[;,\s]+/).filter(Boolean).map(a => encodeURIComponent(a).replace(/%40/g, '@')).join(',');
+  const subject = `${STATION} ${PROGRAM} shift report, ${ME.name}, ${fmtD(RD.date)}`;
+  location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(reportText());
 }
 
 /* ---------- COMPLETED ---------- */
@@ -641,7 +830,7 @@ function doneRender() {
   : '<div class="empty">No finished Team Members match that search.</div>';
   $('#d-log').innerHTML = rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${fmtD(r.date)}</td><td>${esc(r.trainee)}</td><td>${esc(r.eid)}</td><td>${esc(TMAP[r.task] ? TMAP[r.task].label : r.task)}</td>
-      <td>${r.io === 'IN' ? 'Arrival' : 'Departure'}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
+      <td>${phName(r.io)}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
       <td>${r.week}</td><td>${esc(r.trainer)}</td><td>${esc(r.notes)}</td></tr>`).join('')}
   </tbody></table></div>` : `<div class="empty">${emps.length ? 'No tasks were logged for these Team Members.' : 'No tasks match that search.'}</div>`;
   const csv = $('#d-csv');
@@ -659,39 +848,51 @@ function doneRender() {
   });
 }
 
-/* ---------- STATION ---------- */
+/* ---------- STATION AND PROGRAM ---------- */
 function showStation() {
-  document.title = STATION + ' OJT Tracker';
+  document.title = STATION + ' ' + PROGRAM + ' Tracker';
   const b = $('#brand');
-  if (ME.stations.length > 1) {
-    b.innerHTML = `<select id="st-pick" aria-label="Station" title="Switch station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><span>OJT TRACKER</span>`;
-    $('#st-pick').onchange = ev => switchStation(ev.target.value);
-  } else b.textContent = STATION + ' OJT TRACKER';
+  const st = ME.stations.length > 1
+    ? `<select id="st-pick" aria-label="Station" title="Switch station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
+    : `<span>${esc(STATION)}</span>`;
+  const pr = PROGRAMS.length > 1
+    ? `<select id="pr-pick" aria-label="Training program" title="Switch between trackers">${PROGRAMS.map(x => `<option value="${esc(x)}" ${x === PROGRAM ? 'selected' : ''}>${esc(x)} TRACKER</option>`).join('')}</select>`
+    : `<span>${esc(PROGRAM)} TRACKER</span>`;
+  b.innerHTML = st + pr;
+  if ($('#st-pick')) $('#st-pick').onchange = ev => switchStation(ev.target.value);
+  if ($('#pr-pick')) $('#pr-pick').onchange = ev => switchProgram(ev.target.value);
   $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
 }
-async function switchStation(st) {
-  STATION = st; try { localStorage.setItem('rtt-station', st); } catch (e) {}
-  // forget everything from the old station
+// Forget everything from the old station or program and load the new one
+async function reloadAll(msg) {
   Object.keys(SUM).forEach(k => delete SUM[k]);
   PROG = null; sel = null; open = null; q = ''; GSEL.clear(); gq = ''; dq = ''; lastPick = '';
-  H = { trainer: '', task: '', who: '', from: '', to: '' }; lim = 500; F = null;
+  H = { trainer: '', task: '', who: '', from: '', to: '' }; lim = 500; F = null; RD = null;
   showStation();
-  try { await reloadEmps(); freshForm(); await loadToday(); } catch (e) { fail(e); }
+  try {
+    [TASKS, EMPS] = await Promise.all([api('tasks'), api('employees')]);
+    TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
+    freshForm(); await loadToday();
+  } catch (e) { fail(e); }
   const cur = document.querySelector('nav button[aria-current="page"]');
   go(cur ? cur.dataset.v : 'log');
-  toast('Showing ' + st);
+  toast(msg);
 }
+function switchStation(st) { STATION = st; lsSet('rtt-station', st); reloadAll('Showing ' + st); }
+function switchProgram(p) { PROGRAM = p; lsSet('rtt-program', p); reloadAll('Showing the ' + p + ' tracker'); }
 
 /* ---------- BOOT ---------- */
 function go(v) {
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
-  ({ log: vLog, view: vView, done: vDone })[v](); window.scrollTo(0, 0);
+  ({ log: vLog, view: vView, report: vReport, done: vDone })[v](); window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 (async () => {
   try {
     ME = await api('me');
-    let saved = ''; try { saved = localStorage.getItem('rtt-station') || ''; } catch (e) {}
+    PROGRAMS = ME.programs && ME.programs.length ? ME.programs : ['OJT'];
+    const savedP = lsGet('rtt-program'); PROGRAM = PROGRAMS.includes(savedP) ? savedP : PROGRAMS[0];
+    const saved = lsGet('rtt-station');
     STATION = ME.stations.includes(saved) ? saved : ME.station;
     showStation();
     [TASKS, EMPS] = await Promise.all([api('tasks'), api('employees')]);
