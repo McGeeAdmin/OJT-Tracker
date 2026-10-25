@@ -8,17 +8,41 @@
           "clientSecretSettingName": "AAD_CLIENT_SECRET"
         }
       }
-    }
+    },
+    "rolesSource": "/api/GetRoles"
   },
   "routes": [
-    { "route": "/.auth/login/github", "statusCode": 404 },
-    { "route": "/.auth/login/twitter", "statusCode": 404 },
-    { "route": "/api/*", "allowedRoles": ["authenticated"] },
-    { "route": "/*", "allowedRoles": ["authenticated"] }
+    {
+      "route": "/.auth/login/github",
+      "statusCode": 404
+    },
+    {
+      "route": "/.auth/login/twitter",
+      "statusCode": 404
+    },
+    {
+      "route": "/api/*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    }
   ],
   "responseOverrides": {
-    "401": { "redirect": "/.auth/login/aad?post_login_redirect_uri=.referrer", "statusCode": 302 }
+    "401": {
+      "redirect": "/.auth/login/aad?post_login_redirect_uri=.referrer",
+      "statusCode": 302
+    }
   },
-  "navigationFallback": { "rewrite": "/index.html" },
-  "globalHeaders": { "Cache-Control": "no-cache" }
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  },
+  "globalHeaders": {
+    "Cache-Control": "no-cache"
+  }
 }

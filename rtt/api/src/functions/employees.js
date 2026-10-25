@@ -1,7 +1,7 @@
 const { app } = require('@azure/functions');
 const { sql, db, json, bad, secured, clean } = require('../shared');
 
-// GET list, POST add a new trainee
+// GET list, POST add a new trainee. Everything is limited to the user's current station.
 app.http('employees', {
   methods: ['GET', 'POST'], authLevel: 'anonymous', route: 'employees',
   handler: secured(async (req, ctx, user) => {
@@ -9,13 +9,13 @@ app.http('employees', {
     if (req.method === 'GET') {
       const all = req.query.get('all') === '1' && user.isAdmin;
       const finished = req.query.get('finished') === '1';
-      const r = await pool.request().query(`
+      const r = await pool.request().input('st', sql.VarChar(5), user.station).query(`
         SELECT e.EmployeeId AS id, e.FirstName AS first, e.LastName AS last, e.Active AS active,
                COUNT(t.Id) AS total, CONVERT(char(10), MAX(t.LogDate), 23) AS lastDate,
                (SELECT STRING_AGG(x.TrainerEmail, ',') FROM (SELECT DISTINCT TrainerEmail FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerEmails,
                (SELECT STRING_AGG(x.TrainerName, ', ') FROM (SELECT DISTINCT TrainerName FROM dbo.ojt_tasklog WHERE EmployeeId = e.EmployeeId) x) AS trainerNames
         FROM dbo.ojt_employees e LEFT JOIN dbo.ojt_tasklog t ON t.EmployeeId = e.EmployeeId
-        ${finished? 'WHERE e.Active = 0' : all ? '' : 'WHERE e.Active = 1'}
+        WHERE e.Station = @st ${finished ? 'AND e.Active = 0' : all ? '' : 'AND e.Active = 1'}
         GROUP BY e.EmployeeId, e.FirstName, e.LastName, e.Active
         ORDER BY e.LastName, e.FirstName`);
       return json(200, r.recordset.map(e => ({ ...e, trainerEmails: (e.trainerEmails || '').toLowerCase().split(',').filter(Boolean), trainerNames: e.trainerNames || '' })));
@@ -25,20 +25,23 @@ app.http('employees', {
     if (!first || !last) return bad('Enter a first and last name.');
     if (!id || !/^\d{4,20}$/.test(id)) return bad('Employee ID must be numbers only, at least 4 digits.');
     const exists = await pool.request().input('id', sql.VarChar(20), id)
-      .query('SELECT FirstName, LastName FROM dbo.ojt_employees WHERE EmployeeId = @id');
+      .query('SELECT FirstName, LastName, Station FROM dbo.ojt_employees WHERE EmployeeId = @id');
     if (exists.recordset.length) {
       const e = exists.recordset[0];
+      if (e.Station !== user.station)
+        return json(409, { error: `ID ${id} is already on the list at ${e.Station}. Ask IT to move them to ${user.station} if they transferred.` });
       return json(409, { error: `ID ${id} already belongs to ${e.FirstName} ${e.LastName}.` });
     }
     await pool.request()
       .input('id', sql.VarChar(20), id).input('f', sql.NVarChar(60), first)
       .input('l', sql.NVarChar(60), last).input('by', sql.NVarChar(200), user.email)
-      .query('INSERT INTO dbo.ojt_employees (EmployeeId, FirstName, LastName, CreatedBy) VALUES (@id, @f, @l, @by)');
+      .input('st', sql.VarChar(5), user.station)
+      .query('INSERT INTO dbo.ojt_employees (EmployeeId, FirstName, LastName, Station, CreatedBy) VALUES (@id, @f, @l, @st, @by)');
     return json(201, { id, first, last, active: true, total: 0, lastDate: null, trainerEmails: [], trainerNames: '' });
   })
 });
 
-// PUT edit a trainee (supervisors only)
+// PUT edit a trainee
 app.http('employeeEdit', {
   methods: ['PUT'], authLevel: 'anonymous', route: 'employees/{id}',
   handler: secured(async (req, ctx, user) => {
@@ -49,7 +52,8 @@ app.http('employeeEdit', {
     const r = await (await db()).request()
       .input('id', sql.VarChar(20), req.params.id).input('f', sql.NVarChar(60), first)
       .input('l', sql.NVarChar(60), last).input('a', sql.Bit, b.active ? 1 : 0)
-      .query('UPDATE dbo.ojt_employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@id');
+      .input('st', sql.VarChar(5), user.station)
+      .query('UPDATE dbo.ojt_employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@id AND Station=@st');
     if (!r.rowsAffected[0]) return json(404, { error: 'That trainee no longer exists.' });
     return json(200, { ok: true });
   })
@@ -58,14 +62,14 @@ app.http('employeeEdit', {
 // GET one trainee's full record: counts per task plus every entry
 app.http('employeeSummary', {
   methods: ['GET'], authLevel: 'anonymous', route: 'employees/{id}/summary',
-  handler: secured(async req => {
+  handler: secured(async (req, ctx, user) => {
     const pool = await db();
     const id = req.params.id;
-    const e = await pool.request().input('id', sql.VarChar(20), id)
-      .query('SELECT EmployeeId AS id, FirstName AS first, LastName AS last, Active AS active FROM dbo.ojt_employees WHERE EmployeeId=@id');
+    const e = await pool.request().input('id', sql.VarChar(20), id).input('st', sql.VarChar(5), user.station)
+      .query('SELECT EmployeeId AS id, FirstName AS first, LastName AS last, Active AS active FROM dbo.ojt_employees WHERE EmployeeId=@id AND Station=@st');
     if (!e.recordset.length) return json(404, { error: 'No trainee has that ID.' });
     const rows = await pool.request().input('id', sql.VarChar(20), id).query(`
-      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, Phase AS io, Week AS week,
+      SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, RTRIM(Phase) AS io, Week AS week,
              Gate AS gate, Flight AS flight, Tail AS tail, Notes AS notes, TrainerName AS trainer, TrainerEmail AS trainerEmail
       FROM dbo.ojt_tasklog WHERE EmployeeId=@id ORDER BY LogDate DESC, Id DESC`);
     const recs = rows.recordset, counts = {};

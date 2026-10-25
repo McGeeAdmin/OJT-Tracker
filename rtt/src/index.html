@@ -118,6 +118,20 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .me a{color:var(--sign)}
 .loading{padding:40px;text-align:center;color:var(--muted)}
 .proto{font-size:13px;color:var(--muted);margin-top:30px}
+.me select{width:auto;min-height:36px;padding:4px 8px;background:var(--hdr);color:var(--hdrtext);border:2px solid var(--sign);font:700 16px/1 var(--cond)}
+.msel{position:relative}
+.msel summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 12px;min-height:46px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:600}
+.msel summary::-webkit-details-marker{display:none}
+.msel summary::after{content:"▾";color:var(--muted)}
+.msel[open] summary{border-radius:4px 4px 0 0}
+.msel .mpanel{position:absolute;left:0;right:0;top:100%;z-index:4;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 4px 4px;box-shadow:0 8px 20px rgba(0,0,0,.15);padding:10px}
+.msel .mbtns{display:flex;gap:8px;margin:8px 0}
+.msel .mbtns button{flex:1;min-height:40px;padding:6px 10px}
+.mopts{max-height:300px;overflow:auto;border-top:1px solid var(--line)}
+.mopts label{display:flex;align-items:center;gap:10px;margin:0;padding:10px 4px;min-height:46px;border-bottom:1px solid var(--line);font-weight:500;cursor:pointer}
+.mopts label:last-child{border-bottom:0}
+.mopts input{width:22px;height:22px;min-height:0;flex:0 0 auto;accent-color:var(--ink)}
+.mopts small{color:var(--muted);margin-left:auto}
 
 .ico{display:none}
 .viewbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
@@ -161,7 +175,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 </style>
 </head>
 <body>
-<header><div class="bar"><div class="brand">OJT TRACKER</div>
+<header><div class="bar"><div class="brand" id="brand">OJT TRACKER</div>
 <nav aria-label="Main">
 <button data-v="log" aria-current="page"><span class="ico" aria-hidden="true">＋</span>Submit tasks</button>
 <button data-v="view"><span class="ico" aria-hidden="true">☰</span>View submissions</button>
@@ -172,12 +186,13 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 
 <script>
 /* ---------- API ---------- */
+let STATION = '';                 // station the page is showing; the server checks it against the user's groups
 async function api(path, opts = {}, tries = 0) {
   let r;
   try {
     r = await fetch('/api/' + path, {
       method: opts.method || 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: STATION ? { 'Content-Type': 'application/json', 'X-Station': STATION } : { 'Content-Type': 'application/json' },
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
   } catch (e) { throw new Error('Can’t reach the server. Check your connection and try again.'); }
@@ -332,7 +347,7 @@ function pickName(v, forceNew) {
    <div class="grid g4"><div><label for="n-first">First name</label><input id="n-first" value="${esc(/^\d+$/.test(v) ? '' : parts[0] || '')}"></div>
    <div><label for="n-last">Last name</label><input id="n-last" value="${esc(/^\d+$/.test(v) ? '' : parts.slice(1).join(' '))}"></div>
    <div><label for="n-id">Employee ID</label><input id="n-id" inputmode="numeric" value="${/^\d+$/.test(v) ? esc(v) : ''}"></div></div>
-   <p class="hint">Double-check the ID. It can only be changed by an admin later.</p>
+   <p class="hint">They’ll be added to ${esc(STATION)}. Double-check the ID. It can only be changed by an admin later.</p>
    <div class="actions"><button class="btn" id="n-add">Add team member</button></div><p class="err" id="n-err" role="alert"></p></div>`;
   $('#n-add').onclick = async () => {
     const btn = $('#n-add'); btn.disabled = true;
@@ -446,16 +461,41 @@ async function detail() {
 }
 
 /* Progress grid */
+let GSEL = new Set(), gq = '';   // picked Team Member ids (empty = show everyone in the list)
 function grid() {
-  const ids = mineOnly(EMPS).filter(e => !q || (nameOf(e) + e.id).toLowerCase().includes(q.toLowerCase()));
-  $('#tv').innerHTML = `<div class="row"><div><label for="q2">Filter</label><input id="q2" value="${esc(q)}" placeholder="Name or ID"></div></div>
-  ${ids.length ? `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${t.phase === 'IN' ? 'Arrival' : 'Departure'}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
-  <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
-  <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record.</p>`
-  : `<div class="empty">${scope === 'mine' ? 'You haven’t logged tasks for any Team Member yet.' : 'No Team Members yet. Add one on the Submit tasks page.'}</div>`}`;
-  $('#q2').oninput = ev => { q = ev.target.value; grid(); const n = $('#q2'); n.focus(); n.setSelectionRange(q.length, q.length); };
-  app.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
+  const pool = mineOnly(EMPS);
+  const picked = pool.filter(e => GSEL.has(e.id));
+  $('#tv').innerHTML = pool.length ? `<div class="row"><div style="max-width:420px"><label id="g-lab">Team Members</label>
+    <details class="msel" id="g-msel"><summary aria-labelledby="g-lab" id="g-sum"></summary><div class="mpanel">
+      <input id="g-q" value="${esc(gq)}" placeholder="Search name or ID" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="mbtns"><button type="button" class="btn sec" id="g-all">Select shown</button><button type="button" class="btn sec" id="g-none">Clear</button></div>
+      <div class="mopts" id="g-opts"></div></div></details></div></div>
+    <div id="g-table"></div>`
+  : `<div class="empty">${scope === 'mine' ? 'You haven’t logged tasks for any Team Member yet.' : 'No Team Members yet. Add one on the Submit tasks page.'}</div>`;
+  if (!pool.length) return;
+  const shownOpts = () => pool.filter(e => !gq || (nameOf(e) + ' ' + e.id).toLowerCase().includes(gq.toLowerCase()));
+  const sumText = () => { const n = pool.filter(e => GSEL.has(e.id)).length; $('#g-sum').textContent = n ? `${n} of ${pool.length} selected` : `Everyone (${pool.length})`; };
+  const opts = () => {
+    const list = shownOpts();
+    $('#g-opts').innerHTML = list.length ? list.map(e => `<label><input type="checkbox" data-gs="${esc(e.id)}" ${GSEL.has(e.id) ? 'checked' : ''}><span>${esc(nameOf(e))}</span><small>${esc(e.id)}</small></label>`).join('')
+      : '<div class="empty" style="padding:16px">No matches.</div>';
+    $('#g-opts').querySelectorAll('[data-gs]').forEach(c => c.onchange = () => { c.checked ? GSEL.add(c.dataset.gs) : GSEL.delete(c.dataset.gs); sumText(); table(); });
+  };
+  const table = () => {
+    const ids = GSEL.size && pool.some(e => GSEL.has(e.id)) ? pool.filter(e => GSEL.has(e.id)) : pool;
+    $('#g-table').innerHTML = `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${t.phase === 'IN' ? 'Arrival' : 'Departure'}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
+    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record.</p>`;
+    $('#g-table').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
+  };
+  $('#g-q').oninput = ev => { gq = ev.target.value; opts(); };
+  $('#g-all').onclick = () => { shownOpts().forEach(e => GSEL.add(e.id)); opts(); sumText(); table(); };
+  $('#g-none').onclick = () => { GSEL.clear(); gq = ''; $('#g-q').value = ''; opts(); sumText(); table(); };
+  $('#g-msel').addEventListener('toggle', ev => { if (ev.target.open && innerWidth > 700) $('#g-q').focus(); });
+  sumText(); opts(); table();
 }
+// Close the Team Member picker when tapping anywhere else
+document.addEventListener('click', ev => { const m = document.querySelector('.msel[open]'); if (m && !m.contains(ev.target)) m.open = false; });
 
 /* All submissions: one card per form submission */
 let H = { trainer: '', task: '', who: '', from: '', to: '' }, HD = { rows: [], trainers: [] }, lim = 500, timer;
@@ -595,6 +635,28 @@ function doneRender() {
   });
 }
 
+/* ---------- STATION ---------- */
+function showStation() {
+  $('#brand').textContent = STATION + ' OJT TRACKER';
+  document.title = STATION + ' OJT Tracker';
+  const pick = ME.stations.length > 1
+    ? `<select id="st-pick" aria-label="Station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : '';
+  $('#me').innerHTML = `${pick}${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
+  if (pick) $('#st-pick').onchange = ev => switchStation(ev.target.value);
+}
+async function switchStation(st) {
+  STATION = st; try { localStorage.setItem('rtt-station', st); } catch (e) {}
+  // forget everything from the old station
+  Object.keys(SUM).forEach(k => delete SUM[k]);
+  PROG = null; sel = null; open = null; q = ''; GSEL.clear(); gq = ''; dq = ''; lastPick = '';
+  H = { trainer: '', task: '', who: '', from: '', to: '' }; lim = 500; F = null;
+  showStation();
+  try { await reloadEmps(); freshForm(); await loadToday(); } catch (e) { fail(e); }
+  const cur = document.querySelector('nav button[aria-current="page"]');
+  go(cur ? cur.dataset.v : 'log');
+  toast('Showing ' + st);
+}
+
 /* ---------- BOOT ---------- */
 function go(v) {
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
@@ -603,11 +665,14 @@ function go(v) {
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 (async () => {
   try {
-    [ME, TASKS, EMPS] = await Promise.all([api('me'), api('tasks'), api('employees')]);
+    ME = await api('me');
+    let saved = ''; try { saved = localStorage.getItem('rtt-station') || ''; } catch (e) {}
+    STATION = ME.stations.includes(saved) ? saved : ME.station;
+    showStation();
+    [TASKS, EMPS] = await Promise.all([api('tasks'), api('employees')]);
     TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
-    $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
     freshForm(); await loadToday(); go('log');
-  } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}${ME ? '' : '<br><br><a href="/.auth/logout">Sign out</a>'}</div>`; }
 })();
 </script>
 </body>

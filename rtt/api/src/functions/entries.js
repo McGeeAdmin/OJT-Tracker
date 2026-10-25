@@ -11,11 +11,14 @@ app.http('entries', {
     if (req.method === 'GET') {
       const q = k => req.query.get(k) || '';
       const r = pool.request();
-      const where = [];
+      const where = ['e.Station = @st'];
+      r.input('st', sql.VarChar(5), user.station);
+      // Finished (completed) trainees only show on the Completed page
+      if (q('finished') === '1') where.push('e.Active = 0');
+      else if (q('all') !== '1') where.push('e.Active = 1');
       if (q('mine') === '1') { where.push('t.TrainerEmail = @me'); r.input('me', sql.NVarChar(200), user.email); }
       if (q('trainer')) { where.push('t.TrainerName = @tr'); r.input('tr', sql.NVarChar(120), q('trainer')); }
       if (q('task')) { where.push('t.TaskCode = @task'); r.input('task', sql.VarChar(40), q('task')); }
-      if (q('finished') === '1') where.push('e.Active = 0');
       if (isDate(q('from'))) { where.push('t.LogDate >= @from'); r.input('from', sql.Date, q('from')); }
       if (isDate(q('to'))) { where.push('t.LogDate <= @to'); r.input('to', sql.Date, q('to')); }
       if (q('who')) {
@@ -30,9 +33,11 @@ app.http('entries', {
                t.Gate AS gate, t.Flight AS flight, t.Tail AS tail, t.Notes AS notes,
                t.TrainerName AS trainer, t.TrainerEmail AS trainerEmail
         FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
-        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+        WHERE ${where.join(' AND ')}
         ORDER BY t.LogDate DESC, t.Id DESC`);
-      const trainers = await pool.request().query('SELECT DISTINCT TrainerName AS name FROM dbo.ojt_tasklog ORDER BY TrainerName');
+      const trainers = await pool.request().input('st', sql.VarChar(5), user.station).query(`
+        SELECT DISTINCT t.TrainerName AS name FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+        WHERE e.Station = @st ORDER BY t.TrainerName`);
       return json(200, { rows: res.recordset, trainers: trainers.recordset.map(t => t.name) });
     }
 
@@ -51,8 +56,8 @@ app.http('entries', {
     const codes = new Set(TASKS.filter(t => !t.hidden).map(t => t.code));
     if (tasks.some(t => !codes.has(t))) return bad('One of the selected tasks is no longer on the list. Reload the page and try again.');
 
-    const emp = await pool.request().input('id', sql.VarChar(20), b.employeeId)
-      .query('SELECT 1 FROM dbo.ojt_employees WHERE EmployeeId = @id');
+    const emp = await pool.request().input('id', sql.VarChar(20), b.employeeId).input('st', sql.VarChar(5), user.station)
+      .query('SELECT 1 FROM dbo.ojt_employees WHERE EmployeeId = @id AND Station = @st');
     if (!emp.recordset.length) return bad('That trainee is not on the list. Add them first.');
 
     const group = crypto.randomUUID();
@@ -88,7 +93,9 @@ app.http('entryDelete', {
     const pool = await db();
     const id = parseInt(req.params.id, 10);
     if (!id) return bad('Invalid line.');
-    const r = await pool.request().input('id', sql.Int, id).query('SELECT TrainerEmail FROM dbo.ojt_tasklog WHERE Id = @id');
+    const r = await pool.request().input('id', sql.Int, id).input('st', sql.VarChar(5), user.station).query(`
+      SELECT t.TrainerEmail FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+      WHERE t.Id = @id AND e.Station = @st`);
     if (!r.recordset.length) return json(404, { error: 'That line was already deleted.' });
     if (!user.isAdmin && r.recordset[0].TrainerEmail.toLowerCase() !== user.email)
       return json(403, { error: 'You can only delete lines you logged. Ask a supervisor to delete this one.' });
@@ -104,8 +111,9 @@ app.http('submissionDelete', {
     const grp = String(req.params.grp || '');
     if (!/^[0-9a-f-]{36}$/i.test(grp)) return bad('Invalid submission.');
     const pool = await db();
-    const r = await pool.request().input('g', sql.UniqueIdentifier, grp)
-      .query('SELECT TOP 1 TrainerEmail FROM dbo.ojt_tasklog WHERE EntryGroupId = @g');
+    const r = await pool.request().input('g', sql.UniqueIdentifier, grp).input('st', sql.VarChar(5), user.station).query(`
+      SELECT TOP 1 t.TrainerEmail FROM dbo.ojt_tasklog t JOIN dbo.ojt_employees e ON e.EmployeeId = t.EmployeeId
+      WHERE t.EntryGroupId = @g AND e.Station = @st`);
     if (!r.recordset.length) return json(404, { error: 'That submission was already deleted.' });
     if (!user.isAdmin && r.recordset[0].TrainerEmail.toLowerCase() !== user.email)
       return json(403, { error: 'You can only delete submissions you made. Ask a supervisor to delete this one.' });

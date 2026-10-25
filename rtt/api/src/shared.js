@@ -31,10 +31,18 @@ async function db() {
   }
 }
 
+// Every request runs for exactly one station (user.station). The page sends the station it is showing
+// in the X-Station header; the server only accepts a station the user's Entra groups give them.
 function secured(handler) {
   return async (request, context) => {
     const user = getUser(request);
     if (!user) return json(401, { error: 'Sign in to continue.' });
+    if (!user.stations.length)
+      return json(403, { error: 'Your account isn’t in a station trainer group yet, so there’s nothing to show. Ask your supervisor or IT to add you to your station’s group, then sign out and back in.', noStation: true });
+    const asked = String(request.headers.get('x-station') || '').trim().toUpperCase();
+    if (asked && !user.stations.includes(asked))
+      return json(403, { error: `You don’t have access to ${asked}. Sign out and back in if your station just changed.`, badStation: true });
+    user.station = asked || user.stations[0];
     try {
       return await handler(request, context, user);
     } catch (err) {
@@ -46,6 +54,7 @@ function secured(handler) {
 }
 
 // Static Web Apps passes the signed-in user in this header (base64 JSON).
+// Station access comes from userRoles, which GetRoles (roles.js) fills in at sign-in from the user's Entra groups.
 function getUser(request) {
   const header = request.headers.get('x-ms-client-principal');
   if (!header) return null;
@@ -54,14 +63,16 @@ function getUser(request) {
   const claim = t => (claims.find(c => c.typ === t) || {}).val;
   const email = String(p.userDetails || claim('preferred_username') || '').toLowerCase();
   if (!email) return null;
-  const admins = String(process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   const name = claim('name') || email.split('@')[0];
-  return { email, name, isAdmin: true };
+  const stations = [...new Set((p.userRoles || [])
+    .map(r => /^station_([a-z0-9]{2,5})$/i.exec(String(r)))
+    .filter(Boolean).map(m => m[1].toUpperCase()))].sort();
+  // Anyone signed in can edit, but only inside the stations they belong to.
+  return { email, name, isAdmin: true, stations };
 }
 
 const json = (status, body) => ({ status, jsonBody: body });
 const bad = msg => json(400, { error: msg });
-
 
 const clean = (v, max) => {
   const s = String(v ?? '').trim();

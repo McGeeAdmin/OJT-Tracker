@@ -1,10 +1,9 @@
-
-
 CREATE TABLE dbo.ojt_employees (
     EmployeeId   VARCHAR(20)   NOT NULL PRIMARY KEY,
     FirstName    NVARCHAR(60)  NOT NULL,
     LastName     NVARCHAR(60)  NOT NULL,
     Active       BIT           NOT NULL DEFAULT 1,
+    Station      VARCHAR(5)    NOT NULL,   -- station code, e.g. SEA
     CreatedBy    NVARCHAR(200) NULL,
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 );
@@ -26,6 +25,7 @@ CREATE TABLE dbo.ojt_tasklog (
     TrainerName  NVARCHAR(120) NOT NULL,
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 );
+CREATE INDEX IX_ojt_employees_Station ON dbo.ojt_employees(Station, Active);
 CREATE INDEX IX_ojt_tasklog_Employee ON dbo.ojt_tasklog(EmployeeId, TaskCode);
 CREATE INDEX IX_ojt_tasklog_Date     ON dbo.ojt_tasklog(LogDate DESC);
 CREATE INDEX IX_ojt_tasklog_Trainer  ON dbo.ojt_tasklog(TrainerEmail, LogDate);

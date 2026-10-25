@@ -4,7 +4,6 @@
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AzureWebJobsStorage": "",
     "SQL_SERVER": "mcg-sql-01.database.windows.net",
-    "SQL_DATABASE": "onboarding",
-    "ADMIN_EMAILS": "supervisor1@yourcompany.com,supervisor2@yourcompany.com"
+    "SQL_DATABASE": "onboarding"
   }
 }
