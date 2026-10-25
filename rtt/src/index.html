@@ -103,22 +103,18 @@ input[readonly]{background:var(--soft);color:var(--muted)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{background:var(--soft);font-weight:700;position:sticky;top:0}
-.mx th.v{writing-mode:vertical-rl;transform:rotate(180deg);vertical-align:bottom;font-weight:600;padding:8px 2px;min-width:28px;line-height:1.15}
-.mx td.c{text-align:center;font-weight:600;padding:8px 2px;min-width:28px}
-.mx td.c.tot,.mx th.tot{font-weight:800;border-left:2px solid var(--line)}
-/* Name column stays narrow so every task and the Total fit; a very long name scrolls inside its own cell */
-.mx td.who,.mx th.who{vertical-align:bottom}
-.mx td.who{vertical-align:middle}
-.mx .gname{display:block;min-width:180px;max-width:250px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
-.mx .gsub{min-width:180px;max-width:250px}
-.mx .gname button{white-space:nowrap}
-.mx .gsub{display:flex;align-items:center;gap:4px;margin-top:2px}
-.mx .gsub small{color:var(--muted)}
-.mx .gsub .mini{margin-left:auto}
+.mx th.v{writing-mode:vertical-rl;transform:rotate(180deg);vertical-align:bottom;font-weight:600;padding:8px 2px}
+.mx td.c{text-align:center;font-weight:600;padding:8px 2px}
+.mx td.c.tot,.mx th.tot{font-weight:800}
+/* The grid gets a little more width than the rest of the page so every task and the Total fit */
+.gwide{width:min(1200px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+/* A very long name scrolls inside its own cell instead of widening the column */
+.mx .gname{display:inline-block;max-width:160px;overflow-x:auto;white-space:nowrap;vertical-align:bottom;scrollbar-width:none}
+.mx th{z-index:3}
 .mx td.c.hi{background:color-mix(in srgb,var(--sign) 55%,transparent);color:var(--signink)}
 .mx td.c.lo{color:var(--muted)}
 .mx td:first-child,.mx th:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
-.mx th:first-child{background:var(--soft);z-index:2}
+.mx th:first-child{background:var(--soft);z-index:4}
 .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
 .row>div{flex:1;min-width:150px}
 .pill{font-size:12px;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff}
@@ -545,8 +541,8 @@ function grid() {
   };
   const table = () => {
     const ids = GSEL.size && pool.some(e => GSEL.has(e.id)) ? pool.filter(e => GSEL.has(e.id)) : pool;
-    $('#g-table').innerHTML = `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th class="who">Team Member</th>${TASKS.map(t => `<th class="v" title="${phName(t.phase)}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v tot">Total</th></tr></thead>
-    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td class="who"><span class="gname"><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}" title="${esc(nameOf(e))}">${esc(nameOf(e))}</button></span><span class="gsub"><small>${esc(e.id)}</small><button class="mini" data-fin="${esc(e.id)}" title="Move ${esc(nameOf(e))} to Completed">Completed?</button></span></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c tot">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
+    $('#g-table').innerHTML = `<div class="scroll gwide" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${phName(t.phase)}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v tot">Total</th></tr></thead>
+    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><span class="gname"><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}" title="${esc(nameOf(e))}">${esc(nameOf(e))}</button></span> <small style="color:var(--muted)">${esc(e.id)}</small><button class="mini" data-fin="${esc(e.id)}" title="Move ${esc(nameOf(e))} to Completed">Completed?</button></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c tot">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
     <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure${phases().includes('PUSH') ? ', purple mark push' : ''}. Select a name to open their record, or Completed to move them to the Completed page.</p>`;
     $('#g-table').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
     $('#g-table').querySelectorAll('[data-fin]').forEach(b => b.onclick = async () => { b.disabled = true; if (await finishEmp(b.dataset.fin)) vView(); else b.disabled = false; });
