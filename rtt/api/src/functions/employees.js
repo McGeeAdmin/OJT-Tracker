@@ -41,21 +41,55 @@ app.http('employees', {
   })
 });
 
-// PUT edit a trainee
+// PUT edit a trainee: name, employee ID, and/or Active (in training vs. completed).
+// Fields left out of the body stay as they are. Changing the ID moves all of their logged tasks to the new ID.
 app.http('employeeEdit', {
   methods: ['PUT'], authLevel: 'anonymous', route: 'employees/{id}',
   handler: secured(async (req, ctx, user) => {
     if (!user.isAdmin) return json(403, { error: 'Only supervisors can edit trainee details.' });
     const b = await req.json().catch(() => ({}));
+    const oldId = String(req.params.id || '');
     const first = clean(b.first, 60), last = clean(b.last, 60);
     if (!first || !last) return bad('Enter a first and last name.');
-    const r = await (await db()).request()
-      .input('id', sql.VarChar(20), req.params.id).input('f', sql.NVarChar(60), first)
-      .input('l', sql.NVarChar(60), last).input('a', sql.Bit, b.active ? 1 : 0)
-      .input('st', sql.VarChar(5), user.station)
-      .query('UPDATE dbo.ojt_employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@id AND Station=@st');
-    if (!r.rowsAffected[0]) return json(404, { error: 'That trainee no longer exists.' });
-    return json(200, { ok: true });
+    const newId = b.id === undefined ? oldId : clean(b.id, 20);
+    if (!newId || !/^\d{4,20}$/.test(newId)) return bad('Employee ID must be numbers only, at least 4 digits.');
+    const pool = await db();
+
+    const cur = await pool.request().input('id', sql.VarChar(20), oldId).input('st', sql.VarChar(5), user.station)
+      .query('SELECT Active FROM dbo.ojt_employees WHERE EmployeeId=@id AND Station=@st');
+    if (!cur.recordset.length) return json(404, { error: 'That trainee no longer exists.' });
+    const active = typeof b.active === 'boolean' ? b.active : !!cur.recordset[0].Active;
+
+    if (newId !== oldId) {
+      const taken = await pool.request().input('id', sql.VarChar(20), newId)
+        .query('SELECT FirstName, LastName, Station FROM dbo.ojt_employees WHERE EmployeeId=@id');
+      if (taken.recordset.length) {
+        const t = taken.recordset[0];
+        return json(409, { error: t.Station === user.station ? `ID ${newId} already belongs to ${t.FirstName} ${t.LastName}.` : `ID ${newId} is already used at ${t.Station}.` });
+      }
+    }
+
+    const tx = new sql.Transaction(pool);
+    await tx.begin();
+    try {
+      const q = () => new sql.Request(tx)
+        .input('old', sql.VarChar(20), oldId).input('new', sql.VarChar(20), newId)
+        .input('f', sql.NVarChar(60), first).input('l', sql.NVarChar(60), last).input('a', sql.Bit, active ? 1 : 0);
+      if (newId === oldId) {
+        await q().query('UPDATE dbo.ojt_employees SET FirstName=@f, LastName=@l, Active=@a WHERE EmployeeId=@old');
+      } else {
+        // The task log points at the ID, so: copy the trainee to the new ID, move their tasks, remove the old row.
+        await q().query(`INSERT INTO dbo.ojt_employees (EmployeeId, FirstName, LastName, Active, Station, CreatedBy, CreatedAt)
+                         SELECT @new, @f, @l, @a, Station, CreatedBy, CreatedAt FROM dbo.ojt_employees WHERE EmployeeId=@old`);
+        await q().query('UPDATE dbo.ojt_tasklog SET EmployeeId=@new WHERE EmployeeId=@old');
+        await q().query('DELETE FROM dbo.ojt_employees WHERE EmployeeId=@old');
+      }
+      await tx.commit();
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+    return json(200, { ok: true, id: newId });
   })
 });
 

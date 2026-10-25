@@ -119,21 +119,26 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .loading{padding:40px;text-align:center;color:var(--muted)}
 .proto{font-size:13px;color:var(--muted);margin-top:30px}
 .brand{display:flex;align-items:center;gap:6px}
-.brand select{width:auto;min-height:0;padding:2px 22px 2px 4px;margin:-2px 0;border:0;border-radius:3px;background:rgba(255,255,255,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 6px center;color:var(--hdrtext);font:700 22px/1 var(--cond);letter-spacing:.02em;-webkit-appearance:none;appearance:none;cursor:pointer}
+.brand select{width:auto;min-height:0;padding:2px 20px 2px 6px;margin:-2px 0;border:0;border-radius:3px;background:rgba(255,255,255,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 6px center;color:var(--hdrtext);font:700 17px/1.2 var(--cond);letter-spacing:.02em;-webkit-appearance:none;appearance:none;cursor:pointer}
 .brand select option{color:#17232F;background:#fff}
 .msel{position:relative}
-.msel summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 12px;min-height:46px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:600}
+.msel summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;min-height:38px;font-size:15px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:600}
 .msel summary::-webkit-details-marker{display:none}
 .msel summary::after{content:"▾";color:var(--muted)}
 .msel[open] summary{border-radius:4px 4px 0 0}
-.msel .mpanel{position:absolute;left:0;right:0;top:100%;z-index:4;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 4px 4px;box-shadow:0 8px 20px rgba(0,0,0,.15);padding:10px}
-.msel .mbtns{display:flex;gap:8px;margin:8px 0}
-.msel .mbtns button{flex:1;min-height:40px;padding:6px 10px}
+.msel .mpanel{position:absolute;left:0;right:0;min-width:280px;top:100%;z-index:4;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 4px 4px;box-shadow:0 8px 20px rgba(0,0,0,.15);padding:10px}
+.msel .mtop{display:flex;gap:6px;margin-bottom:6px}
+.msel .mtop input{min-height:36px;padding:6px 10px;font-size:15px}
+.msel .mtop button{flex:0 0 auto}
 .mopts{max-height:300px;overflow:auto;border-top:1px solid var(--line)}
-.mopts label{display:flex;align-items:center;gap:10px;margin:0;padding:10px 4px;min-height:46px;border-bottom:1px solid var(--line);font-weight:500;cursor:pointer}
+.mopts label{display:flex;align-items:center;gap:10px;margin:0;padding:6px 4px;min-height:38px;font-size:15px;border-bottom:1px solid var(--line);font-weight:500;cursor:pointer}
 .mopts label:last-child{border-bottom:0}
-.mopts input{width:22px;height:22px;min-height:0;flex:0 0 auto;accent-color:var(--ink)}
+.mopts input{width:18px;height:18px;min-height:0;flex:0 0 auto;accent-color:var(--ink)}
 .mopts small{color:var(--muted);margin-left:auto}
+.btn.sm{padding:8px 14px;min-height:38px;font-size:14px}
+.actions.sm{gap:8px}
+.mini{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:12px;padding:2px 8px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.mini:hover{border-color:var(--ok);color:var(--ok)}
 
 .ico{display:none}
 .viewbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
@@ -441,36 +446,53 @@ async function detail() {
    <p class="hint" style="margin-bottom:14px">Trained by ${s.trainers.map(esc).join(', ') || 'no one yet'}. Tap a task to see each time it was done.</p>
    <div class="grid g2" style="gap:24px"><div><div class="phase"><i style="background:var(--arr)"></i>Arrival</div><div class="prog">${sec('IN')}</div></div>
    <div><div class="phase"><i style="background:var(--dep)"></i>Departure</div><div class="prog">${sec('OUT')}</div></div></div>
-   <div class="actions"><button class="btn" id="log-this">Submit tasks for ${esc(e.first)}</button><button class="btn sec" id="see-subs">See ${esc(e.first)}’s submissions</button>${ME.isAdmin ? '<button class="btn sec" id="edit-emp">Edit Team Member</button>' : ''}</div>
+   <div class="actions sm"><button class="btn sm" id="log-this">Submit tasks for ${esc(e.first)}</button><button class="btn sec sm" id="see-subs">See ${esc(e.first)}’s submissions</button>${e.active ? `<button class="btn sec sm" id="finish-emp">Move to Completed</button>` : ''}${ME.isAdmin ? '<button class="btn sec sm" id="edit-emp">Edit Team Member</button>' : ''}</div>
    <div id="edit-box"></div>`;
   $('#back').onclick = () => { sel = null; oneView(); window.scrollTo(0, 0); };
   d.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { open = open === b.dataset.open ? null : b.dataset.open; detail(); });
   $('#log-this').onclick = async () => { freshForm(false); await loadToday(); go('log'); chooseEmp(e.id); };
   $('#see-subs').onclick = () => { H = { trainer: '', task: '', who: e.id, from: '', to: '' }; vmode = 'list'; vView(); };
+  if ($('#finish-emp')) $('#finish-emp').onclick = async () => { if (await finishEmp(e.id)) { window.scrollTo(0, 0); vView(); } };
   if (ME.isAdmin) $('#edit-emp').onclick = () => {
     $('#edit-box').innerHTML = `<div class="panel" style="margin-top:14px;background:var(--soft)"><h2>Edit Team Member</h2><div class="grid g4">
       <div><label for="e-first">First name</label><input id="e-first" value="${esc(e.first)}"></div>
       <div><label for="e-last">Last name</label><input id="e-last" value="${esc(e.last)}"></div>
-      <div><label for="e-act">Status</label><select id="e-act"><option value="1" ${e.active ? 'selected' : ''}>In training</option><option value="0" ${e.active ? '' : 'selected'}>Finished</option></select></div></div>
-      <div class="actions"><button class="btn" id="e-save">Save changes</button></div><p class="err" id="e-err" role="alert"></p></div>`;
+      <div><label for="e-id">Employee ID</label><input id="e-id" inputmode="numeric" value="${esc(e.id)}"></div></div>
+      <p class="hint">Changing the ID moves all of their logged tasks to the new ID.</p>
+      <div class="actions sm"><button class="btn sm" id="e-save">Save changes</button><button class="btn sec sm" id="e-cancel">Cancel</button></div><p class="err" id="e-err" role="alert"></p></div>`;
+    $('#e-cancel').onclick = () => { $('#edit-box').innerHTML = ''; };
     $('#e-save').onclick = async () => {
+      const btn = $('#e-save'), newId = $('#e-id').value.trim();
+      if (newId !== e.id && !confirm(`Change ${e.first}’s ID from ${e.id} to ${newId}? All of their logged tasks will move to the new ID.`)) return;
+      btn.disabled = true;
       try {
-        await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: $('#e-first').value, last: $('#e-last').value, active: $('#e-act').value === '1' } });
-        delete SUM[e.id]; toast('Saved changes'); vView();
-      } catch (x) { $('#e-err').textContent = x.message; }
+        const r = await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: $('#e-first').value, last: $('#e-last').value, id: newId } });
+        delete SUM[e.id]; PROG = null;
+        if (r.id && r.id !== e.id) { if (GSEL.delete(e.id)) GSEL.add(r.id); sel = r.id; }
+        toast('Saved changes'); vView();
+      } catch (x) { $('#e-err').textContent = x.message; btn.disabled = false; }
     };
   };
 }
 
 /* Progress grid */
+// Move a Team Member to Completed (Active = 0). Their submissions then only show on the Completed page.
+async function finishEmp(id) {
+  const e = empBy(id); if (!e) return false;
+  if (!confirm(`Move ${nameOf(e)} to Completed? They’ll leave Submit tasks and View submissions, and their submissions will only show on the Completed page.`)) return false;
+  try {
+    await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: e.first, last: e.last, active: false } });
+    delete SUM[e.id]; PROG = null; GSEL.delete(e.id); if (sel === e.id) sel = null;
+    await reloadEmps(); toast(nameOf(e) + ' moved to Completed'); return true;
+  } catch (x) { fail(x); return false; }
+}
 let GSEL = new Set(), gq = '';   // picked Team Member ids (empty = show everyone in the list)
 function grid() {
   const pool = mineOnly(EMPS);
   const picked = pool.filter(e => GSEL.has(e.id));
-  $('#tv').innerHTML = pool.length ? `<div class="row"><div style="max-width:420px"><label id="g-lab">Team Members</label>
+  $('#tv').innerHTML = pool.length ? `<div class="row"><div style="max-width:300px"><label id="g-lab">Team Members</label>
     <details class="msel" id="g-msel"><summary aria-labelledby="g-lab" id="g-sum"></summary><div class="mpanel">
-      <input id="g-q" value="${esc(gq)}" placeholder="Search name or ID" autocomplete="off" autocorrect="off" spellcheck="false">
-      <div class="mbtns"><button type="button" class="btn sec" id="g-all">Select shown</button><button type="button" class="btn sec" id="g-none">Clear</button></div>
+      <div class="mtop"><input id="g-q" value="${esc(gq)}" placeholder="Search name or ID" autocomplete="off" autocorrect="off" spellcheck="false"><button type="button" class="btn sec sm" id="g-none">Clear</button></div>
       <div class="mopts" id="g-opts"></div></div></details></div></div>
     <div id="g-table"></div>`
   : `<div class="empty">${scope === 'mine' ? 'You haven’t logged tasks for any Team Member yet.' : 'No Team Members yet. Add one on the Submit tasks page.'}</div>`;
@@ -486,12 +508,12 @@ function grid() {
   const table = () => {
     const ids = GSEL.size && pool.some(e => GSEL.has(e.id)) ? pool.filter(e => GSEL.has(e.id)) : pool;
     $('#g-table').innerHTML = `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${t.phase === 'IN' ? 'Arrival' : 'Departure'}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
-    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
-    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record.</p>`;
+    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small><button class="mini" data-fin="${esc(e.id)}" title="Move ${esc(nameOf(e))} to Completed">✓ Completed</button></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record, or ✓ Completed to move them to the Completed page.</p>`;
     $('#g-table').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
+    $('#g-table').querySelectorAll('[data-fin]').forEach(b => b.onclick = async () => { b.disabled = true; if (await finishEmp(b.dataset.fin)) vView(); else b.disabled = false; });
   };
   $('#g-q').oninput = ev => { gq = ev.target.value; opts(); };
-  $('#g-all').onclick = () => { shownOpts().forEach(e => GSEL.add(e.id)); opts(); sumText(); table(); };
   $('#g-none').onclick = () => { GSEL.clear(); gq = ''; $('#g-q').value = ''; opts(); sumText(); table(); };
   $('#g-msel').addEventListener('toggle', ev => { if (ev.target.open && innerWidth > 700) $('#g-q').focus(); });
   sumText(); opts(); table();
