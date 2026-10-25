@@ -157,8 +157,13 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .sub-card.IN{border-left-color:var(--arr)}
 .sub-card.PUSH{border-left-color:var(--push)}
 /* Shift report */
-.rem{margin-bottom:12px}
-.rem label small{color:var(--muted);font-weight:500}
+.remtbl{border:1px solid var(--line);border-radius:4px;overflow-x:auto;margin-bottom:6px}
+.remtbl th,.remtbl td{white-space:normal;vertical-align:middle}
+.remtbl td{padding:6px 10px}
+@media (max-width:700px){.remtbl th,.remtbl td{padding:6px}.remtbl td.nm{width:28%}}
+.remtbl td.id{font-weight:700;width:1%;white-space:nowrap}
+.remtbl td.nm{font-weight:700;width:22%}
+.remtbl textarea{min-height:46px;margin:0;display:block}
 .rep-wrap{background:#fff;color:#1A1A1A;border:1px solid var(--line);border-radius:4px;padding:16px;overflow-x:auto}
 .saved{min-height:20px}
 @media print{
@@ -692,45 +697,28 @@ function reportBody() {
   $('#r-body').innerHTML = `
    <div class="grid g2">
     <div><label for="r-sched">Your schedule</label><input id="r-sched" value="${esc(RD.schedule)}" placeholder="0530-1630" maxlength="40"></div>
-    <div><label for="r-to">Email to</label><input id="r-to" type="email" multiple autocapitalize="off" value="${esc(lsGet('rtt-report-to'))}" placeholder="Separate addresses with commas"></div>
    </div>
    ${tms.length ? `<h2 style="margin-top:20px">Notes on each Team Member</h2>
-    ${tms.map(t => `<div class="rem"><label for="r-n-${esc(t.eid)}">${esc(t.name)} <small>ID ${esc(t.eid)}</small></label><textarea id="r-n-${esc(t.eid)}" data-rem="${esc(t.eid)}" maxlength="1000">${esc(RD.remarks[t.eid] || '')}</textarea></div>`).join('')}`
+    <div class="remtbl"><table><thead><tr><th>McGee No #</th><th>Name</th><th>Remarks &amp; Comments</th></tr></thead><tbody>
+    ${tms.map(t => `<tr><td class="id">${esc(t.eid)}</td><td class="nm">${esc(t.name)}</td><td><textarea aria-label="Remarks for ${esc(t.name)}" data-rem="${esc(t.eid)}" maxlength="1000">${esc(RD.remarks[t.eid] || '')}</textarea></td></tr>`).join('')}
+    </tbody></table></div>`
    : `<div class="empty">You didn’t submit any tasks on ${fmtD(RD.date)}${PROGRAM === 'OJT' ? '' : ' in the ' + esc(PROGRAM) + ' tracker'}. Submit tasks first and your Team Members will show up here.</div>`}
-   <div><label for="r-cov">Other training covered (optional)</label><textarea id="r-cov" maxlength="2000" placeholder="Familiarization:&#10;Plane in general&#10;Water&#10;Air">${esc(RD.covered)}</textarea>
-    <p class="hint">One item per line. End a line with a colon, like “Familiarization:”, to make it a heading.</p></div>
-   <p class="hint">Your notes are kept on this ${innerWidth < 800 ? 'phone' : 'computer'} for ${DRAFT_DAYS} days so you can come back to them, then cleared. Send the report before you leave.</p>
+   <div style="margin-top:14px"><label for="r-cov">Other notes (optional)</label><textarea id="r-cov" maxlength="2000">${esc(RD.covered)}</textarea></div>
    <div class="actions" style="margin-top:4px">
     <button class="btn" id="r-copy" ${tms.length ? '' : 'disabled'}>Copy report</button>
-    <button class="btn sec" id="r-mail" ${tms.length ? '' : 'disabled'}>Open email</button>
     <button class="btn sec" id="r-print" ${tms.length ? '' : 'disabled'}>Print or save as PDF</button>
    </div>
-   <p class="hint">Copy report keeps the tables: paste it into a new Outlook email. Open email starts an email with a plain-text version.</p>
+   <p class="hint">Copy report, then paste it into a new Outlook email.</p>
    <h2 style="margin-top:24px">Preview</h2>
    <div class="rep-wrap"><div id="rep-preview">${reportHtml()}</div></div>`;
   const changed = () => { $('#rep-preview').innerHTML = reportHtml(); saveDraft(); };
   $('#r-sched').oninput = ev => { RD.schedule = ev.target.value; changed(); };
   $('#r-cov').oninput = ev => { RD.covered = ev.target.value; changed(); };
   app.querySelectorAll('[data-rem]').forEach(t => t.oninput = () => { RD.remarks[t.dataset.rem] = t.value; changed(); });
-  $('#r-to').oninput = ev => lsSet('rtt-report-to', ev.target.value.trim());
   $('#r-copy').onclick = copyReport;
-  $('#r-mail').onclick = mailReport;
   $('#r-print').onclick = () => window.print();
 }
 const longDate = d => { const x = new Date(d + 'T12:00'); return (x.getMonth() + 1) + '/' + x.getDate() + '/' + x.getFullYear() + ' ' + x.toLocaleDateString('en-US', { weekday: 'short' }); };
-function reportTitle() {
-  const wk = [...new Set(RD.rows.map(r => r.week))].sort();
-  return 'End of Shift Report for ' + (wk.length ? (wk.length > 1 ? 'Weeks ' : 'Week ') + wk.join(' & ') + ' ' : '') + PROGRAM;
-}
-// Lines ending in ":" are headings, the rest are bullets under them
-function coveredGroups() {
-  const out = []; let cur = null;
-  String(RD.covered || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-    if (/:$/.test(l)) { cur = { head: l, items: [] }; out.push(cur); }
-    else { if (!cur) { cur = { head: '', items: [] }; out.push(cur); } cur.items.push(l.replace(/^[-•*]\s*/, '')); }
-  });
-  return out;
-}
 // Email-ready HTML: inline styles only, light colors, so it looks the same pasted into Outlook
 function reportHtml() {
   const tms = reportTms(), tasks = reportTasks(), nm = {};
@@ -741,9 +729,8 @@ function reportHtml() {
   const td = 'padding:6px 12px;border:1px solid #A6A6A6;vertical-align:middle;';
   const h = t => `<p style="${F}font-weight:700;font-size:15px;margin:0 0 6px">${esc(t)}</p>`;
   const phs = ['IN', 'OUT', 'PUSH'].filter(p => tasks.some(t => t.phase === p));
-  const cov = coveredGroups();
+  const other = String(RD.covered || '').trim();
   return `<div style="${F}">
-   <p style="${F}font-size:18px;font-weight:700;margin:0 0 12px">${esc(reportTitle())}</p>
    <table style="${tbl}"><tr>
     <td style="${td}border-color:#1A1A1A">Trainer: ${esc(ME.name)}</td>
     <td style="${td}border-color:#1A1A1A">Trainer schedule: ${esc(RD.schedule || '')}</td>
@@ -754,7 +741,7 @@ function reportHtml() {
    ${tasks.length ? h('Tasks completed:') + `<table style="${tbl}"><tr><th style="${th}">Task</th><th style="${th}">Done by</th></tr>
     ${phs.map(p => `<tr><td colspan="2" style="${td}background:#F2F2F2;font-weight:700">${esc(phName(p))}</td></tr>`
       + tasks.filter(t => t.phase === p).map(t => `<tr><td style="${td}">${esc(t.label)}</td><td style="${td}">${Object.entries(t.who).map(([e, n]) => esc(nm[e] || e) + (n > 1 ? ' ×' + n : '')).join(', ')}</td></tr>`).join('')).join('')}</table>` : ''}
-   ${cov.map(g => (g.head ? h(g.head) : '') + `<ul style="${F}margin:0 0 14px;padding-left:24px">${g.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
+   ${other ? h('Other notes:') + `<p style="${F}margin:0 0 18px">${esc(other).replace(/\n/g, '<br>')}</p>` : ''}
    ${tms.length ? h('Trainee Assessment:') + `<table style="${tbl}"><tr><th style="${th}">McGee No #</th><th style="${th}">Agent Name</th><th style="${th}">Remarks &amp; Comments</th></tr>
     ${tms.map(t => `<tr><td style="${td}text-align:center;font-weight:700">${esc(t.eid)}</td><td style="${td}text-align:center;font-weight:700">${esc(t.name)}</td><td style="${td}min-width:280px;text-align:center">${esc(RD.remarks[t.eid] || '').replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>` : ''}
   </div>`;
@@ -762,14 +749,14 @@ function reportHtml() {
 function reportText() {
   const tms = reportTms(), tasks = reportTasks(), nm = {};
   tms.forEach(t => { nm[t.eid] = t.name; });
-  const L = [reportTitle(), '', 'Trainer: ' + ME.name, 'Trainer schedule: ' + (RD.schedule || ''), 'Date: ' + longDate(RD.date), 'Station: ' + STATION, '', 'Team Members trained:'];
+  const L = ['Trainer: ' + ME.name, 'Trainer schedule: ' + (RD.schedule || ''), 'Date: ' + longDate(RD.date), 'Station: ' + STATION, '', 'Team Members trained:'];
   tms.forEach(t => L.push(t.eid + '  ' + t.name));
   ['IN', 'OUT', 'PUSH'].forEach(p => {
     const ts = tasks.filter(t => t.phase === p); if (!ts.length) return;
     L.push('', phName(p) + ' tasks completed:');
     ts.forEach(t => L.push('- ' + t.label + ': ' + Object.entries(t.who).map(([e, n]) => (nm[e] || e) + (n > 1 ? ' x' + n : '')).join(', ')));
   });
-  coveredGroups().forEach(g => { L.push(''); if (g.head) L.push(g.head); g.items.forEach(i => L.push('- ' + i)); });
+  if (String(RD.covered || '').trim()) L.push('', 'Other notes:', String(RD.covered).trim());
   L.push('', 'Trainee assessment:');
   tms.forEach(t => L.push(t.eid + ' ' + t.name + ': ' + (RD.remarks[t.eid] || '').replace(/\s*\n\s*/g, ' ')));
   return L.join('\r\n');
@@ -788,11 +775,6 @@ async function copyReport() {
     if (!ok) { toast('Couldn’t copy. Select the preview, copy it, and paste it into an email.'); return; }
   }
   toast('Report copied. Paste it into a new email.');
-}
-function mailReport() {
-  const to = ($('#r-to').value || '').split(/[;,\s]+/).filter(Boolean).map(a => encodeURIComponent(a).replace(/%40/g, '@')).join(',');
-  const subject = `${STATION} ${PROGRAM} shift report, ${ME.name}, ${fmtD(RD.date)}`;
-  location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(reportText());
 }
 
 /* ---------- COMPLETED ---------- */
