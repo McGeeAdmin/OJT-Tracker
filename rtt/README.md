@@ -1,5 +1,7 @@
 # Ramp Trainee Tracker
 
+Used by every McGee station. Each trainer only sees the trainees at the station(s) their Entra group gives them.
+
 A web app for ramp trainers to record which tasks each new hire did on each flight, and to see how many times every trainee has done every task.
 
 Trainers sign in with their Microsoft work account. They can use the app on a phone at the gate or on a computer.
@@ -22,11 +24,19 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 
 "Submit and add another trainee on this flight" keeps the flight details filled in for the next trainee on the same turn.
 
+**Shift report** builds the trainer's end-of-shift report for a day from what they submitted: a header (trainer, schedule, date, station), the Team Members they trained, every task completed and by whom, optional "other training covered" notes (lines ending in a colon become headings), and a Trainee Assessment table with the trainer's remarks for each person. Nothing is stored on the server: what the trainer types is kept only on their own phone or computer for 7 days, so they can come back to it during the shift. **Copy report** puts the formatted report on the clipboard to paste into Outlook; **Open email** starts a plain-text email; **Print or save as PDF** prints just the report.
+
 **View submissions** has three views. A switch at the top shows everyone's trainees or only the trainer's own.
 
 - **By trainee:** one trainee's count for every task and when each was last done. Tapping a task lists every time it was done.
 - **All submissions:** a feed of submissions, newest first, with filters and a CSV download.
 - **Progress grid:** every trainee as a row and every task as a column, with counts in each cell.
+
+---
+
+## OJT and LIT trackers
+
+The program dropdown in the header switches between the **OJT tracker** and the **LIT tracker**. They work the same way but are completely separate: each has its own trainees, task list, submissions, completed list and shift reports. LIT adds a third part of the turn, **Push**, next to Arrival and Departure. The page sends the program in the `X-Program` header; table names come from `PROGRAMS` in `api/src/shared.js`, and both task lists are in `api/src/taskList.js`.
 
 ---
 
@@ -36,7 +46,7 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 |---|---|---|
 | `src/` | Azure Static Web Apps | The web page (`index.html`) and sign-in settings (`staticwebapp.config.json`) |
 | `api/` | Azure Functions, run by Static Web Apps | Reads and saves data, and checks who is signed in |
-| `database/` | Azure SQL Database | `schema.sql` creates the two tables |
+| `database/` | Azure SQL Database | `schema.sql` creates all tables for a new install; `2026-10-lit-tables.sql` adds the LIT tables to an existing one |
 | — | Microsoft Entra ID | Company sign-in. Only accounts in your tenant can get in |
 
 ### The database
@@ -47,6 +57,7 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 |---|---|
 | `EmployeeId` | The trainee's employee ID (the key) |
 | `FirstName`, `LastName` | Trainee's name |
+| `Station` | Station code (SEA, PDX…). Trainers only see trainees at their own stations |
 | `Active` | 1 = in training. 0 = hidden from lists after they finish or leave; their history is kept |
 | `CreatedBy`, `CreatedAt` | Who added the trainee, and when |
 
@@ -59,12 +70,25 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 | `LogDate` | Date the task was done |
 | `EmployeeId` | Which trainee |
 | `TaskCode` | Which task (the codes are listed in `api/src/taskList.js`) |
-| `Phase` | `IN` = arrival, `OUT` = departure |
+| `Phase` | `IN` = arrival, `OUT` = departure, `PUSH` = push (LIT only) |
 | `Week` | Training week, 1 or 2 |
 | `Gate`, `Flight`, `Tail` | Flight details. A gate is required, plus a flight or tail number |
 | `Notes` | Optional trainer notes |
 | `TrainerEmail`, `TrainerName` | Who logged it, taken from their sign-in |
 | `CreatedAt` | When it was saved |
 
+The LIT tables (`lit_employees`, `lit_tasklog`) have the same columns.
+
 ---
 
+## Stations and access
+
+Each station is an **app role** on the Training Tracker app registration (value `SEA`, `PDX`…), and each station's Entra group is assigned to its role under Enterprise applications → Users and groups. At sign-in, Static Web Apps calls `GetRoles` (`api/src/functions/roles.js`), which turns those roles into `station_sea`, `station_pdx`… Every API call is limited to the station the page is showing, and the server refuses any station the user isn't in.
+
+- Adding a station: create an app role whose value is the station code, assign that station's group to it, and add the code to the STATIONS setting so admins can see it.
+- A group that should see several stations (corporate, regional) gets assigned to each of those roles.
+- The **ADMIN** app role can switch to every station listed in the Function App setting **STATIONS** (`SEA,PDX,LAX`). Add a new station's code there as well as creating its app role.
+- Only direct members of an assigned group get the role. Members of groups nested inside it don't.
+- Admins and people with more than one station pick the station from a dropdown in the header, where the station name is.
+- Role changes take effect the next time the person signs out and back in.
+- Completed trainees and their submissions show only on the Completed page.

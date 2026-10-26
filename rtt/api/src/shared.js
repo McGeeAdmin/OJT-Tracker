@@ -10,6 +10,12 @@ const dbConfig = {
   pool: { max: 10, min: 0, idleTimeoutMillis: 30000 }
 };
 
+// Each training program has its own tables. Names are fixed here (never taken from the request), so they're safe to put in SQL.
+const PROGRAMS = {
+  OJT: { emp: 'dbo.ojt_employees', log: 'dbo.ojt_tasklog' },
+  LIT: { emp: 'dbo.lit_employees', log: 'dbo.lit_tasklog' }
+};
+
 let poolPromise = null;
 const WAKE_WINDOW_MS = 40000;   // stay under Static Web Apps' ~45 s request limit
 
@@ -31,10 +37,23 @@ async function db() {
   }
 }
 
+// Every request runs for exactly one station (user.station) and one program (user.program). The page sends the station it is showing
+// in the X-Station header; the server only accepts a station the user's Entra groups give them.
 function secured(handler) {
   return async (request, context) => {
     const user = getUser(request);
     if (!user) return json(401, { error: 'Sign in to continue.' });
+    if (!user.stations.length)
+      return json(403, { error: 'Your account isn’t in a station trainer group yet, so there’s nothing to show. Ask your supervisor or IT to add you to your station’s group, then sign out and back in.', noStation: true });
+    const asked = String(request.headers.get('x-station') || '').trim().toUpperCase();
+    if (asked && !user.stations.includes(asked))
+      return json(403, { error: `You don’t have access to ${asked}. Sign out and back in if your station just changed.`, badStation: true });
+    user.station = asked || user.stations[0];
+    // The page also sends which program it is showing (OJT or LIT) in X-Program.
+    const program = String(request.headers.get('x-program') || 'OJT').trim().toUpperCase();
+    if (!PROGRAMS[program]) return json(400, { error: `There is no ${program} tracker. Reload the page.` });
+    user.program = program;
+    user.t = PROGRAMS[program];
     try {
       return await handler(request, context, user);
     } catch (err) {
@@ -46,6 +65,7 @@ function secured(handler) {
 }
 
 // Static Web Apps passes the signed-in user in this header (base64 JSON).
+// Station access comes from userRoles, which GetRoles (roles.js) fills in at sign-in from the user's Entra groups.
 function getUser(request) {
   const header = request.headers.get('x-ms-client-principal');
   if (!header) return null;
@@ -54,14 +74,16 @@ function getUser(request) {
   const claim = t => (claims.find(c => c.typ === t) || {}).val;
   const email = String(p.userDetails || claim('preferred_username') || '').toLowerCase();
   if (!email) return null;
-  const admins = String(process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   const name = claim('name') || email.split('@')[0];
-  return { email, name, isAdmin: true };
+  const stations = [...new Set((p.userRoles || [])
+    .map(r => /^station_([a-z0-9]{2,5})$/i.exec(String(r)))
+    .filter(Boolean).map(m => m[1].toUpperCase()))].sort();
+  // Anyone signed in can edit, but only inside the stations they belong to.
+  return { email, name, isAdmin: true, stations };
 }
 
 const json = (status, body) => ({ status, jsonBody: body });
 const bad = msg => json(400, { error: msg });
-
 
 const clean = (v, max) => {
   const s = String(v ?? '').trim();
@@ -69,4 +91,4 @@ const clean = (v, max) => {
 };
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 
-module.exports = { sql, db, json, bad, secured, clean, isDate };
+module.exports = { sql, db, json, bad, secured, clean, isDate, PROGRAMS };

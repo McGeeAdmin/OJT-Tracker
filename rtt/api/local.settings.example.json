@@ -5,6 +5,6 @@
     "AzureWebJobsStorage": "",
     "SQL_SERVER": "mcg-sql-01.database.windows.net",
     "SQL_DATABASE": "onboarding",
-    "ADMIN_EMAILS": "supervisor1@yourcompany.com,supervisor2@yourcompany.com"
+    "STATIONS": "SEA,PDX,LAX"
   }
 }
