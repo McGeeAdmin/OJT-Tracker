@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#E6E9EC; --panel:#FFFFFF; --ink:#17232F; --muted:#56636F; --line:#CBD1D7; --soft:#F2F4F6;
-  --sign:#FFFFFF; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --ok:#2A7F52; --danger:#B3261E;
+  --sign:#FFFFFF; --signink:#1A1A1A; --arr:#2B67AE; --dep:#2A7F52; --push:#7A4CB0; --ok:#2A7F52; --danger:#B3261E;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --hdr:#0B3D6E; --hdrtext:#FFFFFF;
@@ -18,9 +18,9 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1A2129; --panel:#232C36; --ink:#E7EBEF; --muted:#9AA6B2; --line:#39444F; --soft:#2B3540;
-  --arr:#6FA3E0; --dep:#5EC08C; --ok:#5EC08C; --danger:#F2867E;}}
+  --arr:#6FA3E0; --dep:#5EC08C; --push:#B596E8; --ok:#5EC08C; --danger:#F2867E;}}
 :root[data-theme="dark"]{--bg:#1A2129; --panel:#232C36; --ink:#E7EBEF; --muted:#9AA6B2; --line:#39444F; --soft:#2B3540;
-  --arr:#6FA3E0; --dep:#5EC08C; --ok:#5EC08C; --danger:#F2867E;}
+  --arr:#6FA3E0; --dep:#5EC08C; --push:#B596E8; --ok:#5EC08C; --danger:#F2867E;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 .grid>*{min-width:0}
@@ -59,6 +59,7 @@ input[readonly]{background:var(--soft);color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .seg button.in[aria-pressed="true"]{background:var(--arr);color:#fff}
 .seg button.out[aria-pressed="true"]{background:var(--dep);color:#fff}
+.seg button.push[aria-pressed="true"]{background:var(--push);color:#fff}
 .who{display:flex;gap:10px;align-items:stretch;margin-top:8px;flex-wrap:wrap}
 .sign{display:inline-flex;align-items:center;font:700 20px/1 var(--cond);letter-spacing:.03em;padding:8px 12px;border:2px solid var(--sign);background:var(--signink);color:var(--sign)}
 .sign.y{background:var(--sign);color:var(--signink);border-color:var(--signink)}
@@ -102,22 +103,50 @@ input[readonly]{background:var(--soft);color:var(--muted)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{background:var(--soft);font-weight:700;position:sticky;top:0}
-.mx th.v{writing-mode:vertical-rl;transform:rotate(180deg);height:200px;vertical-align:bottom;font-weight:600;padding:8px 4px}
-.mx td.c{text-align:center;font-weight:600;padding:8px 4px}
+.mx th.v{writing-mode:vertical-rl;transform:rotate(180deg);vertical-align:bottom;font-weight:600;padding:8px 2px}
+.mx td.c{text-align:center;font-weight:600;padding:8px 2px}
+.mx td.c.tot,.mx th.tot{font-weight:800}
+/* The grid gets a little more width than the rest of the page so every task and the Total fit */
+.gwide{width:fit-content;min-width:100%;max-width:min(1200px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+.mx{width:auto;min-width:100%}
+/* A very long name scrolls inside its own cell instead of widening the column */
+.mx .gname{display:inline-block;max-width:185px;overflow-x:auto;white-space:nowrap;vertical-align:bottom;scrollbar-width:none}
+.mx th{z-index:3}
 .mx td.c.hi{background:color-mix(in srgb,var(--sign) 55%,transparent);color:var(--signink)}
 .mx td.c.lo{color:var(--muted)}
 .mx td:first-child,.mx th:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
-.mx th:first-child{background:var(--soft);z-index:2}
+.mx th:first-child{background:var(--soft);z-index:4}
 .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
 .row>div{flex:1;min-width:150px}
 .pill{font-size:12px;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff}
-.pill.IN{background:var(--arr)} .pill.OUT{background:var(--dep)}
+.pill.IN{background:var(--arr)} .pill.OUT{background:var(--dep)} .pill.PUSH{background:var(--push)}
 .link{background:none;border:0;color:var(--danger);cursor:pointer;font-weight:600;padding:4px}
 .empty{padding:30px 10px;text-align:center;color:var(--muted)}
 .me{margin-left:auto;color:#E9E4D0;font-size:14px;display:flex;gap:10px;align-items:center}
 .me a{color:var(--sign)}
 .loading{padding:40px;text-align:center;color:var(--muted)}
 .proto{font-size:13px;color:var(--muted);margin-top:30px}
+.brand{display:flex;align-items:center;gap:6px}
+.brand select{width:auto;min-height:0;padding:2px 20px 2px 6px;margin:-2px 0;border:0;border-radius:3px;background:rgba(255,255,255,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 6px center;color:var(--hdrtext);font:700 17px/1.2 var(--cond);letter-spacing:.02em;-webkit-appearance:none;appearance:none;cursor:pointer}
+.brand select option{color:#17232F;background:#fff}
+.msel{position:relative}
+.msel summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;min-height:38px;font-size:15px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:600}
+.msel summary::-webkit-details-marker{display:none}
+.msel summary::after{content:"▾";color:var(--muted)}
+.msel[open] summary{border-radius:4px 4px 0 0}
+.msel .mpanel{position:absolute;left:0;right:0;min-width:280px;top:100%;z-index:4;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 4px 4px;box-shadow:0 8px 20px rgba(0,0,0,.15);padding:10px}
+.msel .mtop{display:flex;gap:6px;margin-bottom:6px}
+.msel .mtop input{min-height:36px;padding:6px 10px;font-size:15px}
+.msel .mtop button{flex:0 0 auto}
+.mopts{max-height:300px;overflow:auto;border-top:1px solid var(--line)}
+.mopts label{display:flex;align-items:center;gap:10px;margin:0;padding:6px 4px;min-height:38px;font-size:15px;border-bottom:1px solid var(--line);font-weight:500;cursor:pointer}
+.mopts label:last-child{border-bottom:0}
+.mopts input{width:18px;height:18px;min-height:0;flex:0 0 auto;accent-color:var(--ink)}
+.mopts small{color:var(--muted);margin-left:auto}
+.btn.sm{padding:8px 14px;min-height:38px;font-size:14px}
+.actions.sm{gap:8px}
+.mini{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:12px;padding:2px 8px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.mini:hover{border-color:var(--ok);color:var(--ok)}
 
 .ico{display:none}
 .viewbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
@@ -127,12 +156,31 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 .prow .last{color:var(--muted);font-weight:500}
 .mx td.c.has{font-weight:700}
 .ph{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:4px}
-.ph.IN{background:var(--arr)}.ph.OUT{background:var(--dep)}
+.ph.IN{background:var(--arr)}.ph.OUT{background:var(--dep)}.ph.PUSH{background:var(--push)}
 .filters{margin-bottom:6px}
 .filters summary{font:700 18px/1.2 var(--cond);cursor:pointer;min-height:28px}
 .day{font:700 17px/1.2 var(--cond);margin:16px 0 6px;color:var(--muted)}
 .sub-card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--dep);border-radius:4px;padding:8px 12px;margin-bottom:6px}
 .sub-card.IN{border-left-color:var(--arr)}
+.sub-card.PUSH{border-left-color:var(--push)}
+/* Shift report */
+.rtop .msel summary{min-height:46px;font-weight:500;font-size:16px}
+.remtbl{border:1px solid var(--line);border-radius:4px;overflow-x:auto;margin-bottom:6px}
+.remtbl th,.remtbl td{white-space:normal;vertical-align:middle}
+.remtbl td{padding:6px 10px}
+@media (max-width:700px){.remtbl th,.remtbl td{padding:6px}.remtbl td.nm{width:28%}}
+.remtbl td.id{font-weight:700;width:1%;white-space:nowrap}
+.remtbl td.nm{font-weight:700;width:22%}
+.remtbl textarea{min-height:46px;margin:0;display:block}
+#rep-preview table{width:auto}
+#rep-preview th,#rep-preview td{white-space:normal}
+.rep-wrap{background:#fff;color:#1A1A1A;border:1px solid var(--line);border-radius:4px;padding:16px;overflow-x:auto}
+.saved{min-height:20px}
+@media print{
+  body *{visibility:hidden}
+  #rep-preview,#rep-preview *{visibility:visible}
+  #rep-preview{position:absolute;left:0;top:0;width:100%}
+}
 .sc-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .sc-top .name{color:var(--ink);font-weight:700;font-size:16px;padding:0;text-align:left}
 .sc-top small{color:var(--muted)}
@@ -148,7 +196,7 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
   .bar{padding:10px 14px}
   .me{font-size:13px}
   nav{position:fixed;left:0;right:0;bottom:0;background:var(--hdr);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:6;border-top:2px solid var(--sign)}
-  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:16px;border-bottom:0;padding:6px}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:14px;border-bottom:0;padding:6px 2px;text-align:center}
   nav button[aria-current="page"]{background:rgba(255,199,44,.12)}
   .ico{display:block;font-size:20px;line-height:1}
   main{padding-bottom:110px}
@@ -161,10 +209,11 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 </style>
 </head>
 <body>
-<header><div class="bar"><div class="brand">OJT TRACKER</div>
+<header><div class="bar"><div class="brand" id="brand">OJT TRACKER</div>
 <nav aria-label="Main">
 <button data-v="log" aria-current="page"><span class="ico" aria-hidden="true">＋</span>Submit tasks</button>
 <button data-v="view"><span class="ico" aria-hidden="true">☰</span>View submissions</button>
+<button data-v="report"><span class="ico" aria-hidden="true">✉</span>Shift report</button>
 <button data-v="done"><span class="ico" aria-hidden="true">✓</span>Completed</button>
 </nav><div class="me" id="me"></div></div></header>
 <main id="app"><div class="loading">Signing you in…</div></main>
@@ -172,12 +221,14 @@ th{background:var(--soft);font-weight:700;position:sticky;top:0}
 
 <script>
 /* ---------- API ---------- */
+let STATION = '';                 // station the page is showing; the server checks it against the user's groups
+let PROGRAM = 'OJT', PROGRAMS = ['OJT'];   // training program the page is showing (OJT or LIT); each has its own trainees and tasks
 async function api(path, opts = {}, tries = 0) {
   let r;
   try {
     r = await fetch('/api/' + path, {
       method: opts.method || 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json', 'X-Program': PROGRAM }, STATION ? { 'X-Station': STATION } : {}),
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
   } catch (e) { throw new Error('Can’t reach the server. Check your connection and try again.'); }
@@ -222,6 +273,15 @@ function guessWeek(s) {
   return String(s.latestWeek || 1);
 }
 async function reloadEmps() { EMPS = await api('employees'); }
+// Parts of a turn. OJT has arrival and departure; LIT also has push.
+const PH = { IN: 'Arrival', OUT: 'Departure', PUSH: 'Push' };
+const PHBTN = { IN: 'Arrival (In)', OUT: 'Departure (Out)', PUSH: 'Push' };
+const PHVAR = { IN: '--arr', OUT: '--dep', PUSH: '--push' };
+const PHCLS = { IN: 'in', OUT: 'out', PUSH: 'push' };
+const phases = () => ['IN', 'OUT', 'PUSH'].filter(p => TASKS.some(t => t.phase === p));
+const phName = p => PH[p] || p;
+const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
 /* ---------- LOG ---------- */
 let F = null, TODAY = [];
@@ -238,6 +298,7 @@ async function loadToday() {
 }
 function vLog() {
   if (!F) freshForm();
+  if (!phases().includes(F.io)) F.io = phases().includes('OUT') ? 'OUT' : (phases()[0] || 'OUT');
   const e = empBy(F.eid), s = F.eid ? SUM[F.eid] : null, c = s ? s.counts : {};
   app.innerHTML = `<h1>Submit tasks</h1><p class="sub">One entry per TM per flight. Pick everything they did on this turn.</p>
   <div class="panel grid">
@@ -257,8 +318,8 @@ function vLog() {
     <div><label>Training week</label><div class="seg" role="group" aria-label="Training week">
       <button data-week="1" aria-pressed="${F.week === '1'}">Week 1</button><button data-week="2" aria-pressed="${F.week === '2'}">Week 2</button></div>
       ${e && s && s.records.length ? '<p class="hint">Filled in from their training record. Change it if it’s wrong.</p>' : ''}</div>
-    <div><label>Arrival or departure</label><div class="seg" role="group" aria-label="Arrival or departure">
-      <button class="in" data-io="IN" aria-pressed="${F.io === 'IN'}">Arrival (In)</button><button class="out" data-io="OUT" aria-pressed="${F.io === 'OUT'}">Departure (Out)</button></div></div>
+    <div><label>${phases().length > 2 ? 'Arrival, departure or push' : 'Arrival or departure'}</label><div class="seg" role="group" aria-label="Part of the turn">
+      ${phases().map(p => `<button class="${PHCLS[p]}" data-io="${p}" aria-pressed="${F.io === p}">${PHBTN[p]}</button>`).join('')}</div></div>
    </div>
    <div>
     <div class="grid g4">
@@ -290,9 +351,9 @@ function renderTasks(c) {
   const box = $('#tasks');
   const list = TASKS.filter(t => t.phase === F.io);
   const other = TASKS.filter(t => t.phase !== F.io && F.tasks.has(t.code));
-  box.innerHTML = `<div class="phase"><i style="background:var(${F.io === 'IN' ? '--arr' : '--dep'})"></i>${F.io === 'IN' ? 'Arrival' : 'Departure'} tasks completed</div>
+  box.innerHTML = `<div class="phase"><i style="background:var(${PHVAR[F.io]})"></i>${phName(F.io)} tasks completed</div>
    <div class="tasks">${list.map(t => `<button class="chip" data-t="${t.code}" aria-pressed="${F.tasks.has(t.code)}"><span class="l">${esc(t.label)}</span>${F.eid ? `<span class="n">${c[t.code] || 0}×</span>` : ''}</button>`).join('')}</div>
-   ${other.length ? `<p class="hint">Also selected from ${F.io === 'IN' ? 'departure' : 'arrival'}: ${other.map(t => esc(t.label)).join(', ')}</p>` : ''}
+   ${other.length ? `<p class="hint">Also selected from another part of the turn: ${other.map(t => esc(t.label) + ' (' + phName(t.phase).toLowerCase() + ')').join(', ')}</p>` : ''}
    <p class="hint">${F.eid ? 'Numbers show how many times this team member has done each task so far.' : 'Pick a team member to see how many times they’ve done each task.'}</p>`;
   box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
     const id = b.dataset.t; F.tasks.has(id) ? F.tasks.delete(id) : F.tasks.add(id);
@@ -332,7 +393,7 @@ function pickName(v, forceNew) {
    <div class="grid g4"><div><label for="n-first">First name</label><input id="n-first" value="${esc(/^\d+$/.test(v) ? '' : parts[0] || '')}"></div>
    <div><label for="n-last">Last name</label><input id="n-last" value="${esc(/^\d+$/.test(v) ? '' : parts.slice(1).join(' '))}"></div>
    <div><label for="n-id">Employee ID</label><input id="n-id" inputmode="numeric" value="${/^\d+$/.test(v) ? esc(v) : ''}"></div></div>
-   <p class="hint">Double-check the ID. It can only be changed by an admin later.</p>
+   <p class="hint">They’ll be added to ${esc(STATION)}. Double-check the ID. It can only be changed by an admin later.</p>
    <div class="actions"><button class="btn" id="n-add">Add team member</button></div><p class="err" id="n-err" role="alert"></p></div>`;
   $('#n-add').onclick = async () => {
     const btn = $('#n-add'); btn.disabled = true;
@@ -422,40 +483,81 @@ async function detail() {
    <div class="stats"><div><b>${done} of ${TASKS.length}</b><span>tasks done at least once</span></div><div><b>${rs.length}</b><span>tasks logged</span></div>
    <div><b>${fmtD(s.firstDate)}</b><span>first logged</span></div><div><b>Week ${guessWeek(s)}</b><span>current</span></div></div>
    <p class="hint" style="margin-bottom:14px">Trained by ${s.trainers.map(esc).join(', ') || 'no one yet'}. Tap a task to see each time it was done.</p>
-   <div class="grid g2" style="gap:24px"><div><div class="phase"><i style="background:var(--arr)"></i>Arrival</div><div class="prog">${sec('IN')}</div></div>
-   <div><div class="phase"><i style="background:var(--dep)"></i>Departure</div><div class="prog">${sec('OUT')}</div></div></div>
-   <div class="actions"><button class="btn" id="log-this">Submit tasks for ${esc(e.first)}</button><button class="btn sec" id="see-subs">See ${esc(e.first)}’s submissions</button>${ME.isAdmin ? '<button class="btn sec" id="edit-emp">Edit Team Member</button>' : ''}</div>
+   <div class="grid g2" style="gap:24px">${phases().map(p => `<div><div class="phase"><i style="background:var(${PHVAR[p]})"></i>${phName(p)}</div><div class="prog">${sec(p)}</div></div>`).join('')}</div>
+   <div class="actions sm"><button class="btn sm" id="log-this">Submit tasks for ${esc(e.first)}</button><button class="btn sec sm" id="see-subs">See ${esc(e.first)}’s submissions</button>${e.active ? `<button class="btn sec sm" id="finish-emp">Move to Completed</button>` : ''}${ME.isAdmin ? '<button class="btn sec sm" id="edit-emp">Edit Team Member</button>' : ''}</div>
    <div id="edit-box"></div>`;
   $('#back').onclick = () => { sel = null; oneView(); window.scrollTo(0, 0); };
   d.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { open = open === b.dataset.open ? null : b.dataset.open; detail(); });
   $('#log-this').onclick = async () => { freshForm(false); await loadToday(); go('log'); chooseEmp(e.id); };
   $('#see-subs').onclick = () => { H = { trainer: '', task: '', who: e.id, from: '', to: '' }; vmode = 'list'; vView(); };
+  if ($('#finish-emp')) $('#finish-emp').onclick = async () => { if (await finishEmp(e.id)) { window.scrollTo(0, 0); vView(); } };
   if (ME.isAdmin) $('#edit-emp').onclick = () => {
     $('#edit-box').innerHTML = `<div class="panel" style="margin-top:14px;background:var(--soft)"><h2>Edit Team Member</h2><div class="grid g4">
       <div><label for="e-first">First name</label><input id="e-first" value="${esc(e.first)}"></div>
       <div><label for="e-last">Last name</label><input id="e-last" value="${esc(e.last)}"></div>
-      <div><label for="e-act">Status</label><select id="e-act"><option value="1" ${e.active ? 'selected' : ''}>In training</option><option value="0" ${e.active ? '' : 'selected'}>Finished</option></select></div></div>
-      <div class="actions"><button class="btn" id="e-save">Save changes</button></div><p class="err" id="e-err" role="alert"></p></div>`;
+      <div><label for="e-id">Employee ID</label><input id="e-id" inputmode="numeric" value="${esc(e.id)}"></div></div>
+      <p class="hint">Changing the ID moves all of their logged tasks to the new ID.</p>
+      <div class="actions sm"><button class="btn sm" id="e-save">Save changes</button><button class="btn sec sm" id="e-cancel">Cancel</button></div><p class="err" id="e-err" role="alert"></p></div>`;
+    $('#e-cancel').onclick = () => { $('#edit-box').innerHTML = ''; };
     $('#e-save').onclick = async () => {
+      const btn = $('#e-save'), newId = $('#e-id').value.trim();
+      if (newId !== e.id && !confirm(`Change ${e.first}’s ID from ${e.id} to ${newId}? All of their logged tasks will move to the new ID.`)) return;
+      btn.disabled = true;
       try {
-        await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: $('#e-first').value, last: $('#e-last').value, active: $('#e-act').value === '1' } });
-        delete SUM[e.id]; toast('Saved changes'); vView();
-      } catch (x) { $('#e-err').textContent = x.message; }
+        const r = await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: $('#e-first').value, last: $('#e-last').value, id: newId } });
+        delete SUM[e.id]; PROG = null;
+        if (r.id && r.id !== e.id) { if (GSEL.delete(e.id)) GSEL.add(r.id); sel = r.id; }
+        toast('Saved changes'); vView();
+      } catch (x) { $('#e-err').textContent = x.message; btn.disabled = false; }
     };
   };
 }
 
 /* Progress grid */
-function grid() {
-  const ids = mineOnly(EMPS).filter(e => !q || (nameOf(e) + e.id).toLowerCase().includes(q.toLowerCase()));
-  $('#tv').innerHTML = `<div class="row"><div><label for="q2">Filter</label><input id="q2" value="${esc(q)}" placeholder="Name or ID"></div></div>
-  ${ids.length ? `<div class="scroll" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${t.phase === 'IN' ? 'Arrival' : 'Departure'}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v">Total</th></tr></thead>
-  <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}">${esc(nameOf(e))}</button> <small style="color:var(--muted)">${esc(e.id)}</small></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
-  <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure. Select a name to open their record.</p>`
-  : `<div class="empty">${scope === 'mine' ? 'You haven’t logged tasks for any Team Member yet.' : 'No Team Members yet. Add one on the Submit tasks page.'}</div>`}`;
-  $('#q2').oninput = ev => { q = ev.target.value; grid(); const n = $('#q2'); n.focus(); n.setSelectionRange(q.length, q.length); };
-  app.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
+// Move a Team Member to Completed (Active = 0). Their submissions then only show on the Completed page.
+async function finishEmp(id) {
+  const e = empBy(id); if (!e) return false;
+  if (!confirm(`Move ${nameOf(e)} to Completed? They’ll leave Submit tasks and View submissions, and their submissions will only show on the Completed page.`)) return false;
+  try {
+    await api('employees/' + encodeURIComponent(e.id), { method: 'PUT', body: { first: e.first, last: e.last, active: false } });
+    delete SUM[e.id]; PROG = null; GSEL.delete(e.id); if (sel === e.id) sel = null;
+    await reloadEmps(); toast(nameOf(e) + ' moved to Completed'); return true;
+  } catch (x) { fail(x); return false; }
 }
+let GSEL = new Set(), gq = '';   // picked Team Member ids (empty = show everyone in the list)
+function grid() {
+  const pool = mineOnly(EMPS);
+  const picked = pool.filter(e => GSEL.has(e.id));
+  $('#tv').innerHTML = pool.length ? `<div class="row"><div style="max-width:300px"><label id="g-lab">Team Members</label>
+    <details class="msel" id="g-msel"><summary aria-labelledby="g-lab" id="g-sum"></summary><div class="mpanel">
+      <div class="mtop"><input id="g-q" value="${esc(gq)}" placeholder="Search name or ID" autocomplete="off" autocorrect="off" spellcheck="false"><button type="button" class="btn sec sm" id="g-none">Clear</button></div>
+      <div class="mopts" id="g-opts"></div></div></details></div></div>
+    <div id="g-table"></div>`
+  : `<div class="empty">${scope === 'mine' ? 'You haven’t logged tasks for any Team Member yet.' : 'No Team Members yet. Add one on the Submit tasks page.'}</div>`;
+  if (!pool.length) return;
+  const shownOpts = () => pool.filter(e => !gq || (nameOf(e) + ' ' + e.id).toLowerCase().includes(gq.toLowerCase()));
+  const sumText = () => { const n = pool.filter(e => GSEL.has(e.id)).length; $('#g-sum').textContent = n ? `${n} of ${pool.length} selected` : `Everyone (${pool.length})`; };
+  const opts = () => {
+    const list = shownOpts();
+    $('#g-opts').innerHTML = list.length ? list.map(e => `<label><input type="checkbox" data-gs="${esc(e.id)}" ${GSEL.has(e.id) ? 'checked' : ''}><span>${esc(nameOf(e))}</span><small>${esc(e.id)}</small></label>`).join('')
+      : '<div class="empty" style="padding:16px">No matches.</div>';
+    $('#g-opts').querySelectorAll('[data-gs]').forEach(c => c.onchange = () => { c.checked ? GSEL.add(c.dataset.gs) : GSEL.delete(c.dataset.gs); sumText(); table(); });
+  };
+  const table = () => {
+    const ids = GSEL.size && pool.some(e => GSEL.has(e.id)) ? pool.filter(e => GSEL.has(e.id)) : pool;
+    $('#g-table').innerHTML = `<div class="scroll gwide" style="max-height:75vh"><table class="mx"><thead><tr><th>Team Member</th>${TASKS.map(t => `<th class="v" title="${phName(t.phase)}"><span class="ph ${t.phase}"></span>${esc(t.label)}</th>`).join('')}<th class="v tot">Total</th></tr></thead>
+    <tbody>${ids.map(e => { const c = PROG[e.id] || {}; return `<tr><td><span class="gname"><button class="link" style="color:var(--ink);padding:0" data-g="${esc(e.id)}" title="${esc(nameOf(e))}">${esc(nameOf(e))}</button></span> <small style="color:var(--muted)">${esc(e.id)}</small><button class="mini" data-fin="${esc(e.id)}" title="Move ${esc(nameOf(e))} to Completed">Completed?</button></td>${TASKS.map(t => { const n = c[t.code] || 0; return `<td class="c ${n ? 'has' : 'lo'}">${n || '·'}</td>`; }).join('')}<td class="c tot">${c._t || 0}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="hint">Each number is how many times that Team Member has done the task. Blue dots mark arrival tasks, green mark departure${phases().includes('PUSH') ? ', purple mark push' : ''}. Select a name to open their record, or Completed to move them to the Completed page.</p>`;
+    $('#g-table').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { sel = b.dataset.g; vmode = 'Team Member'; vView(); });
+    $('#g-table').querySelectorAll('[data-fin]').forEach(b => b.onclick = async () => { b.disabled = true; if (await finishEmp(b.dataset.fin)) vView(); else b.disabled = false; });
+  };
+  $('#g-q').oninput = ev => { gq = ev.target.value; opts(); };
+  $('#g-none').onclick = () => { GSEL.clear(); gq = ''; $('#g-q').value = ''; opts(); sumText(); table(); };
+  $('#g-msel').addEventListener('toggle', ev => { if (ev.target.open && innerWidth > 700) $('#g-q').focus(); });
+  sumText(); opts(); table();
+}
+// Close the Team Member picker when tapping anywhere else
+document.addEventListener('click', ev => { const m = document.querySelector('.msel[open]'); if (m && !m.contains(ev.target)) m.open = false; });
 
 /* All submissions: one card per form submission */
 let H = { trainer: '', task: '', who: '', from: '', to: '' }, HD = { rows: [], trainers: [] }, lim = 500, timer;
@@ -465,7 +567,7 @@ function vList() {
   $('#tv').innerHTML = `<details class="panel filters" ${innerWidth > 700 || active ? 'open' : ''}><summary>Filters${active ? ' (' + active + ' on)' : ''}</summary><div class="grid g4" style="margin-top:12px">
    <div><label for="h-who">Team Member</label><input id="h-who" value="${esc(H.who)}" placeholder="Name or ID"></div>
    <div><label for="h-tr">Trainer</label><select id="h-tr"><option value="">All trainers</option></select></div>
-   <div><label for="h-task">Task</label><select id="h-task"><option value="">All tasks</option>${TASKS.map(t => `<option value="${t.code}" ${t.code === H.task ? 'selected' : ''}>${esc(t.label)} (${t.phase === 'IN' ? 'arr' : 'dep'})</option>`).join('')}</select></div>
+   <div><label for="h-task">Task</label><select id="h-task"><option value="">All tasks</option>${TASKS.map(t => `<option value="${t.code}" ${t.code === H.task ? 'selected' : ''}>${esc(t.label)} (${phName(t.phase).toLowerCase()})</option>`).join('')}</select></div>
    <div><label for="h-from">From</label><input id="h-from" type="date" value="${H.from}"></div>
    <div><label for="h-to">To</label><input id="h-to" type="date" value="${H.to}"></div>
   </div><div class="actions" style="margin-top:12px"><button class="btn sec" id="clear">Clear filters</button><button class="btn sec" id="csv">Download as CSV</button></div></details>
@@ -502,7 +604,7 @@ function renderHist() {
     const hdr = g.date !== lastDate ? `<h3 class="day">${dayLabel(g.date)}</h3>` : ''; lastDate = g.date;
     const mine = g.trainerEmail.toLowerCase() === ME.email, canDel = ME.isAdmin || mine;
     return `${hdr}<article class="sub-card ${g.io}">
-      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small> <span class="pill ${g.io}">${g.io === 'IN' ? 'Arrival' : 'Departure'}</span></div>
+      <div class="sc-top"><div><button class="link name" data-open-emp="${esc(g.eid)}">${esc(g.trainee)}</button> <small>${esc(g.eid)}</small> <span class="pill ${g.io}">${phName(g.io)}</span></div>
         <div class="sc-right"><span>by ${esc(g.trainer)}${mine ? ' (you)' : ''}</span>${canDel ? `<button class="link" data-del="${g.grp}">Delete</button>` : ''}</div></div>
       <div class="sc-line"><span>Gate <b>${esc(g.gate)}</b> &nbsp; Flight <b>${esc(g.flight) || '—'}</b> &nbsp; Tail <b>${esc(g.tail) || '—'}</b> &nbsp; Wk <b>${g.week}</b></span>
         <div class="sc-tasks">${g.tasks.map(t => `<span class="tag">${esc(TMAP[t] ? TMAP[t].label : t)}</span>`).join('')}</div></div>
@@ -535,11 +637,200 @@ function dayLabel(d) {
 function downloadCsv(rows, name) {
   const h = ['Date', 'EmployeeID', 'Team Member', 'Task', 'Phase', 'Gate', 'Flight', 'Tail', 'Week', 'Trainer', 'Notes'];
   const qv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const csv = [h.join(',')].concat(rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, r.io === 'IN' ? 'Arrival' : 'Departure', r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
+  const csv = [h.join(',')].concat(rows.map(r => [r.date, r.eid, r.trainee, TMAP[r.task] ? TMAP[r.task].label : r.task, phName(r.io), r.gate, r.flight, r.tail, r.week, r.trainer, r.notes].map(qv).join(','))).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
   a.download = name + '-' + today() + '.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- SHIFT REPORT ---------- */
+// Built from the submissions of the trainers picked here, for one day or a range of days.
+// Shift, other notes and remarks are typed here and kept only in this browser (no history on the server).
+let RD = null, RFROM = '', RTO = '', RSEL = null;   // RSEL: emails of the trainers picked
+const DRAFT_DAYS = 7;
+const draftKey = () => 'rtt-report:' + PROGRAM + ':' + STATION + ':' + RD.from + ':' + RD.to;
+function loadDraft() {
+  let d = {}; try { d = JSON.parse(lsGet(draftKey()) || '{}'); } catch (e) {}
+  RD.shift = d.shift != null ? d.shift : lsGet('rtt-shift');
+  RD.covered = d.covered || ''; RD.remarks = d.remarks || {};
+}
+function saveDraft() {
+  lsSet(draftKey(), JSON.stringify({ shift: RD.shift, covered: RD.covered, remarks: RD.remarks, at: Date.now() }));
+  lsSet('rtt-shift', RD.shift || '');
+}
+// Clear drafts older than a week
+function pruneDrafts() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i); if (!k || !k.startsWith('rtt-report:')) continue;
+      let at = 0; try { at = JSON.parse(localStorage.getItem(k)).at || 0; } catch (e) {}
+      if (Date.now() - at > DRAFT_DAYS * 864e5) localStorage.removeItem(k);
+    }
+  } catch (e) {}
+}
+async function vReport() {
+  if (!RFROM) RFROM = RTO = today();
+  if (!RSEL) RSEL = new Set([ME.email]);
+  app.innerHTML = `<h1>Shift report</h1><p class="sub">Who was trained, the tasks they did, and notes on each Team Member. Pick one or more trainers and a day or a range of days.</p>
+  <div class="panel grid">
+   <div class="grid g2 rtop">
+    <div><label id="r-tlab">Trainer(s)</label><div id="r-trainers"><input readonly value="Loading…" aria-labelledby="r-tlab"></div></div>
+    <div class="grid g2" style="gap:10px">
+     <div><label for="r-from">From</label><input id="r-from" type="date" value="${RFROM}"></div>
+     <div><label for="r-to">To</label><input id="r-to" type="date" value="${RTO}"></div>
+    </div>
+   </div>
+   <div id="r-body"><div class="loading">Loading…</div></div>
+  </div>`;
+  const setDates = () => {
+    let f = $('#r-from').value || today(), t = $('#r-to').value || f;
+    if (t < f) [f, t] = [t, f];
+    RFROM = f; RTO = t; vReport();
+  };
+  $('#r-from').onchange = () => { if ($('#r-to').value < $('#r-from').value) $('#r-to').value = $('#r-from').value; setDates(); };
+  $('#r-to').onchange = setDates;
+  const from = RFROM, to = RTO;
+  let d;
+  // Every submission at this station in the range, including Team Members already moved to Completed
+  try { d = await api('entries?all=1&from=' + from + '&to=' + to + '&top=5000'); }
+  catch (e) { if ($('#r-body')) $('#r-body').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!$('#r-body') || from !== RFROM || to !== RTO) return;   // user moved on while loading
+  d.rows.forEach(r => { r.io = String(r.io || '').trim(); r.trainerEmail = String(r.trainerEmail || '').toLowerCase(); });
+  if (d.rows.length >= 5000) toast('That range has too many submissions to show all of them. Pick fewer days.');
+  RD = { from, to, all: d.rows.slice().reverse() };
+  pruneDrafts(); loadDraft();
+  trainerPicker();
+  reportBody();
+}
+// Trainers who submitted anything in the range, plus you
+function trainerOpts() {
+  const m = new Map([[ME.email, { email: ME.email, name: ME.name, n: 0 }]]);
+  RD.all.forEach(r => { const o = m.get(r.trainerEmail) || { email: r.trainerEmail, name: r.trainer, n: 0 }; o.n++; m.set(r.trainerEmail, o); });
+  return [...m.values()].sort((a, b) => (b.email === ME.email) - (a.email === ME.email) || a.name.localeCompare(b.name));
+}
+const pickedTrainers = () => trainerOpts().filter(o => RSEL.has(o.email));
+function trainerPicker() {
+  const opts = trainerOpts(), box = $('#r-trainers');
+  const sumText = () => { const p = pickedTrainers(); return !p.length ? 'No one selected' : p.length === 1 ? p[0].name + (p[0].email === ME.email ? ' (you)' : '') : p.length + ' trainers'; };
+  box.innerHTML = `<details class="msel" id="r-msel"><summary aria-labelledby="r-tlab" id="r-tsum"></summary><div class="mpanel">
+    <div class="mtop"><button type="button" class="btn sec sm" id="r-tall">Select all</button><button type="button" class="btn sec sm" id="r-tme">Just me</button></div>
+    <div class="mopts">${opts.map(o => `<label><input type="checkbox" data-tr="${esc(o.email)}" ${RSEL.has(o.email) ? 'checked' : ''}><span>${esc(o.name)}${o.email === ME.email ? ' (you)' : ''}</span><small>${o.n} task${o.n === 1 ? '' : 's'}</small></label>`).join('')}</div></div></details>`;
+  const upd = () => { $('#r-tsum').textContent = sumText(); reportBody(); };
+  box.querySelectorAll('[data-tr]').forEach(c => c.onchange = () => { c.checked ? RSEL.add(c.dataset.tr) : RSEL.delete(c.dataset.tr); upd(); });
+  $('#r-tall').onclick = () => { opts.forEach(o => RSEL.add(o.email)); box.querySelectorAll('[data-tr]').forEach(c => { c.checked = true; }); upd(); };
+  $('#r-tme').onclick = () => { RSEL = new Set([ME.email]); box.querySelectorAll('[data-tr]').forEach(c => { c.checked = c.dataset.tr === ME.email; }); upd(); };
+  $('#r-tsum').textContent = sumText();
+}
+const reportRows = () => RD.all.filter(r => RSEL.has(r.trainerEmail));
+function reportTms() {
+  const m = new Map();
+  reportRows().forEach(r => {
+    if (!m.has(r.eid)) m.set(r.eid, { eid: r.eid, first: r.first, last: r.last, name: r.first + ' ' + r.last, trainers: [] });
+    const t = m.get(r.eid); if (!t.trainers.includes(r.trainer)) t.trainers.push(r.trainer);
+  });
+  return [...m.values()].sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
+}
+function reportTasks() {
+  const by = {};
+  reportRows().forEach(r => { const t = by[r.task] = by[r.task] || { io: r.io, who: {} }; t.who[r.eid] = (t.who[r.eid] || 0) + 1; });
+  const order = TASKS.map(t => t.code).concat(Object.keys(by).filter(c => !TMAP[c]));
+  return order.filter(c => by[c]).map(c => ({ label: TMAP[c] ? TMAP[c].label : c, phase: TMAP[c] ? TMAP[c].phase : by[c].io, who: by[c].who }));
+}
+const rangeText = () => RD.from === RD.to ? longDate(RD.from) : longDate(RD.from) + ' – ' + longDate(RD.to);
+function reportBody() {
+  const tms = reportTms();
+  $('#r-body').innerHTML = `
+   <div style="max-width:260px">
+    <div><label for="r-shift">Shift</label><input id="r-shift" value="${esc(RD.shift)}" placeholder="0530-1630" maxlength="40"></div>
+   </div>
+   ${tms.length ? `<h2 style="margin-top:20px">Notes on each Team Member</h2>
+    <div class="remtbl"><table><thead><tr><th>McGee No #</th><th>Name</th><th>Remarks &amp; Comments</th></tr></thead><tbody>
+    ${tms.map(t => `<tr><td class="id">${esc(t.eid)}</td><td class="nm">${esc(t.name)}</td><td><textarea aria-label="Remarks for ${esc(t.name)}" data-rem="${esc(t.eid)}" maxlength="1000">${esc(RD.remarks[t.eid] || '')}</textarea></td></tr>`).join('')}
+    </tbody></table></div>`
+   : `<div class="empty">${pickedTrainers().length ? 'No tasks were submitted by the selected trainer' + (pickedTrainers().length > 1 ? 's' : '') + ' on ' + esc(RD.from === RD.to ? fmtD(RD.from) : fmtD(RD.from) + ' – ' + fmtD(RD.to)) + '.' : 'Pick at least one trainer.'}</div>`}
+   <div style="margin-top:14px"><label for="r-cov">Other notes (optional)</label><textarea id="r-cov" maxlength="2000">${esc(RD.covered)}</textarea></div>
+   <div class="actions" style="margin-top:4px">
+    <button class="btn" id="r-copy" ${tms.length ? '' : 'disabled'}>Copy report</button>
+    <button class="btn sec" id="r-print" ${tms.length ? '' : 'disabled'}>Print or save as PDF</button>
+   </div>
+   <p class="hint">Copy report, then paste it into a new Outlook email.</p>
+   <h2 style="margin-top:24px">Preview</h2>
+   <div class="rep-wrap"><div id="rep-preview">${reportHtml()}</div></div>`;
+  const changed = () => { $('#rep-preview').innerHTML = reportHtml(); saveDraft(); };
+  $('#r-shift').oninput = ev => { RD.shift = ev.target.value; changed(); };
+  $('#r-cov').oninput = ev => { RD.covered = ev.target.value; changed(); };
+  app.querySelectorAll('[data-rem]').forEach(t => t.oninput = () => { RD.remarks[t.dataset.rem] = t.value; changed(); });
+  $('#r-copy').onclick = copyReport;
+  $('#r-print').onclick = () => window.print();
+}
+const longDate = d => { const x = new Date(d + 'T12:00'); return (x.getMonth() + 1) + '/' + x.getDate() + '/' + x.getFullYear() + ' ' + x.toLocaleDateString('en-US', { weekday: 'short' }); };
+// Names for the Trainer box: the picked trainers who submitted something in the range
+function trainerNames() {
+  const p = pickedTrainers(), withRows = p.filter(o => o.n);
+  return (withRows.length ? withRows : p).map(o => o.name);
+}
+// Email-ready HTML: inline styles only, light colors, so it looks the same pasted into Outlook
+function reportHtml() {
+  const tms = reportTms(), tasks = reportTasks(), nm = {}, trs = trainerNames(), multi = pickedTrainers().length > 1;
+  tms.forEach(t => { nm[t.eid] = t.name; });
+  const F = 'font-family:Calibri,Arial,sans-serif;font-size:12px;color:#1A1A1A;';
+  const tbl = `border-collapse:collapse;${F}margin:0 0 12px;`;
+  const th = 'background:#E8963E;color:#1A1A1A;font-weight:700;padding:5px 8px;border:1px solid #A6A6A6;text-align:center;';
+  const td = 'padding:4px 8px;border:1px solid #A6A6A6;vertical-align:middle;';
+  const hd = td + 'border-color:#1A1A1A;';
+  const c = td + 'text-align:center;font-weight:700;';
+  const h = t => `<p style="${F}font-weight:700;font-size:13px;margin:0 0 4px">${esc(t)}</p>`;
+  const phs = ['IN', 'OUT', 'PUSH'].filter(p => tasks.some(t => t.phase === p));
+  const other = String(RD.covered || '').trim(), shift = String(RD.shift || '').trim();
+  return `<div style="${F}">
+   <table style="${tbl}"><tr>
+    <td style="${hd}">${trs.length > 1 ? 'Trainers' : 'Trainer'}: ${esc(trs.join(', '))}</td>
+    ${shift ? `<td style="${hd}">Shift: ${esc(shift)}</td>` : ''}
+    <td style="${hd}">Date: ${esc(rangeText())}</td>
+    <td style="${hd}">Station: ${esc(STATION)}</td></tr></table>
+   ${tms.length ? `<table style="${tbl}"><tr><th style="${th}">McGee No #</th><th style="${th}">First Name</th><th style="${th}">Last Name</th>${multi ? `<th style="${th}">Trainer(s)</th>` : ''}</tr>
+    ${tms.map(t => `<tr><td style="${c}">${esc(t.eid)}</td><td style="${c}">${esc(t.first)}</td><td style="${c}">${esc(t.last)}</td>${multi ? `<td style="${td}text-align:center">${esc(t.trainers.join(', '))}</td>` : ''}</tr>`).join('')}</table>` : ''}
+   ${tasks.length ? h('Tasks completed:') + `<table style="${tbl}"><tr><th style="${th}">Task</th><th style="${th}">Done by</th></tr>
+    ${phs.map(p => `<tr><td colspan="2" style="${td}background:#F2F2F2;font-weight:700">${esc(phName(p))}</td></tr>`
+      + tasks.filter(t => t.phase === p).map(t => `<tr><td style="${td}">${esc(t.label)}</td><td style="${td}">${Object.entries(t.who).map(([e, n]) => esc(nm[e] || e) + (n > 1 ? ' ×' + n : '')).join(', ')}</td></tr>`).join('')).join('')}</table>` : ''}
+   ${other ? h('Other notes:') + `<p style="${F}margin:0 0 12px">${esc(other).replace(/\n/g, '<br>')}</p>` : ''}
+   ${tms.length ? h('Trainee Assessment:') + `<table style="${tbl}"><tr><th style="${th}">McGee No #</th><th style="${th}">Agent Name</th><th style="${th}">Remarks &amp; Comments</th></tr>
+    ${tms.map(t => `<tr><td style="${c}">${esc(t.eid)}</td><td style="${c}">${esc(t.name)}</td><td style="${td}min-width:220px;text-align:center">${esc(RD.remarks[t.eid] || '').replace(/\n/g, '<br>')}</td></tr>`).join('')}</table>` : ''}
+  </div>`;
+}
+function reportText() {
+  const tms = reportTms(), tasks = reportTasks(), nm = {}, trs = trainerNames(), multi = pickedTrainers().length > 1;
+  tms.forEach(t => { nm[t.eid] = t.name; });
+  const shift = String(RD.shift || '').trim();
+  const L = [(trs.length > 1 ? 'Trainers: ' : 'Trainer: ') + trs.join(', ')];
+  if (shift) L.push('Shift: ' + shift);
+  L.push('Date: ' + rangeText(), 'Station: ' + STATION, '', 'Team Members trained:');
+  tms.forEach(t => L.push(t.eid + '  ' + t.name + (multi ? '  (trainer: ' + t.trainers.join(', ') + ')' : '')));
+  ['IN', 'OUT', 'PUSH'].forEach(p => {
+    const ts = tasks.filter(t => t.phase === p); if (!ts.length) return;
+    L.push('', phName(p) + ' tasks completed:');
+    ts.forEach(t => L.push('- ' + t.label + ': ' + Object.entries(t.who).map(([e, n]) => (nm[e] || e) + (n > 1 ? ' x' + n : '')).join(', ')));
+  });
+  if (String(RD.covered || '').trim()) L.push('', 'Other notes:', String(RD.covered).trim());
+  L.push('', 'Trainee assessment:');
+  tms.forEach(t => L.push(t.eid + ' ' + t.name + ': ' + (RD.remarks[t.eid] || '').replace(/\s*\n\s*/g, ' ')));
+  return L.join('\r\n');
+}
+async function copyReport() {
+  const html = reportHtml(), text = reportText();
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw new Error('no rich clipboard');
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
+  } catch (e) {
+    // Older browsers: select the preview and copy it the old way (also keeps the formatting)
+    const n = $('#rep-preview'), rg = document.createRange(), s = getSelection();
+    rg.selectNodeContents(n); s.removeAllRanges(); s.addRange(rg);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (x) {}
+    s.removeAllRanges();
+    if (!ok) { toast('Couldn’t copy. Select the preview, copy it, and paste it into an email.'); return; }
+  }
+  toast('Report copied. Paste it into a new email.');
 }
 
 /* ---------- COMPLETED ---------- */
@@ -572,17 +863,28 @@ function doneRender() {
   const { emps, rows } = doneMatch();
   $('#d-list').innerHTML = emps.length ? `<div class="scroll" style="max-height:50vh"><table><thead><tr><th>Team Member</th><th>ID</th><th>Tasks logged</th><th>Last logged</th><th></th></tr></thead><tbody>
   ${emps.map(e => `<tr><td>${esc(nameOf(e))}</td><td>${esc(e.id)}</td><td>${e.total}</td><td>${fmtD(e.lastDate)}</td>
-    <td>${ME.isAdmin ? `<button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button>` : ''}</td></tr>`).join('')}
+    <td>${ME.isAdmin ? `<div class="actions sm" style="margin:0;flex-wrap:nowrap"><button class="btn sec" style="min-height:36px;padding:6px 12px" data-react="${esc(e.id)}">Put back in training</button><button class="btn warn" style="min-height:36px;padding:6px 12px" data-del-emp="${esc(e.id)}">Delete</button></div>` : ''}</td></tr>`).join('')}
   </tbody></table></div><p class="hint">Showing ${emps.length} of ${DONE.emps.length} finished Team Members.</p>`
   : '<div class="empty">No finished Team Members match that search.</div>';
   $('#d-log').innerHTML = rows.length ? `<div class="scroll" style="max-height:70vh"><table><thead><tr><th>Date</th><th>Team Member</th><th>ID</th><th>Task</th><th>Phase</th><th>Gate</th><th>Flight</th><th>Tail</th><th>Week</th><th>Trainer</th><th>Notes</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${fmtD(r.date)}</td><td>${esc(r.trainee)}</td><td>${esc(r.eid)}</td><td>${esc(TMAP[r.task] ? TMAP[r.task].label : r.task)}</td>
-      <td>${r.io === 'IN' ? 'Arrival' : 'Departure'}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
+      <td>${phName(r.io)}</td><td>${esc(r.gate)}</td><td>${esc(r.flight) || '—'}</td><td>${esc(r.tail) || '—'}</td>
       <td>${r.week}</td><td>${esc(r.trainer)}</td><td>${esc(r.notes)}</td></tr>`).join('')}
   </tbody></table></div>` : `<div class="empty">${emps.length ? 'No tasks were logged for these Team Members.' : 'No tasks match that search.'}</div>`;
   const csv = $('#d-csv');
   csv.disabled = !rows.length;
   csv.onclick = () => downloadCsv(rows, emps.length === 1 ? 'completed-' + emps[0].id : 'completed-trainees');
+  $('#d-list').querySelectorAll('[data-del-emp]').forEach(b => b.onclick = async () => {
+    const e = DONE.emps.find(x => x.id === b.dataset.delEmp);
+    const n = DONE.rows.filter(r => r.eid === e.id).length;
+    if (!confirm(`Delete ${nameOf(e)} (ID ${e.id}) and all ${n} of their logged task${n === 1 ? '' : 's'}? This can’t be undone.`)) return;
+    b.disabled = true;
+    try {
+      await api('employees/' + encodeURIComponent(e.id), { method: 'DELETE' });
+      delete SUM[e.id]; PROG = null; await reloadEmps();
+      toast('Deleted ' + nameOf(e)); vDone();
+    } catch (x) { fail(x); b.disabled = false; }
+  });
   $('#d-list').querySelectorAll('[data-react]').forEach(b => b.onclick = async () => {
     const e = DONE.emps.find(x => x.id === b.dataset.react);
     if (!confirm(`Put ${nameOf(e)} back in training? They'll show up again on Submit tasks and View submissions.`)) return;
@@ -595,19 +897,57 @@ function doneRender() {
   });
 }
 
+/* ---------- STATION AND PROGRAM ---------- */
+function showStation() {
+  document.title = STATION + ' ' + PROGRAM + ' Tracker';
+  const b = $('#brand');
+  const st = ME.stations.length > 1
+    ? `<select id="st-pick" aria-label="Station" title="Switch station">${ME.stations.map(x => `<option ${x === STATION ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
+    : `<span>${esc(STATION)}</span>`;
+  const pr = PROGRAMS.length > 1
+    ? `<select id="pr-pick" aria-label="Training program" title="Switch between trackers">${PROGRAMS.map(x => `<option value="${esc(x)}" ${x === PROGRAM ? 'selected' : ''}>${esc(x)} TRACKER</option>`).join('')}</select>`
+    : `<span>${esc(PROGRAM)} TRACKER</span>`;
+  b.innerHTML = st + pr;
+  if ($('#st-pick')) $('#st-pick').onchange = ev => switchStation(ev.target.value);
+  if ($('#pr-pick')) $('#pr-pick').onchange = ev => switchProgram(ev.target.value);
+  $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
+}
+// Forget everything from the old station or program and load the new one
+async function reloadAll(msg) {
+  Object.keys(SUM).forEach(k => delete SUM[k]);
+  PROG = null; sel = null; open = null; q = ''; GSEL.clear(); gq = ''; dq = ''; lastPick = '';
+  H = { trainer: '', task: '', who: '', from: '', to: '' }; lim = 500; F = null; RD = null; RSEL = null;
+  showStation();
+  try {
+    [TASKS, EMPS] = await Promise.all([api('tasks'), api('employees')]);
+    TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
+    freshForm(); await loadToday();
+  } catch (e) { fail(e); }
+  const cur = document.querySelector('nav button[aria-current="page"]');
+  go(cur ? cur.dataset.v : 'log');
+  toast(msg);
+}
+function switchStation(st) { STATION = st; lsSet('rtt-station', st); reloadAll('Showing ' + st); }
+function switchProgram(p) { PROGRAM = p; lsSet('rtt-program', p); reloadAll('Showing the ' + p + ' tracker'); }
+
 /* ---------- BOOT ---------- */
 function go(v) {
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v ? 'page' : 'false'));
-  ({ log: vLog, view: vView, done: vDone })[v](); window.scrollTo(0, 0);
+  ({ log: vLog, view: vView, report: vReport, done: vDone })[v](); window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 (async () => {
   try {
-    [ME, TASKS, EMPS] = await Promise.all([api('me'), api('tasks'), api('employees')]);
+    ME = await api('me');
+    PROGRAMS = ME.programs && ME.programs.length ? ME.programs : ['OJT'];
+    const savedP = lsGet('rtt-program'); PROGRAM = PROGRAMS.includes(savedP) ? savedP : PROGRAMS[0];
+    const saved = lsGet('rtt-station');
+    STATION = ME.stations.includes(saved) ? saved : ME.station;
+    showStation();
+    [TASKS, EMPS] = await Promise.all([api('tasks'), api('employees')]);
     TMAP = Object.fromEntries(TASKS.map(t => [t.code, t]));
-    $('#me').innerHTML = `${esc(ME.name)} <a href="/.auth/logout">Sign out</a>`;
     freshForm(); await loadToday(); go('log');
-  } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  } catch (e) { app.innerHTML = `<div class="empty">${esc(e.message)}${ME ? '' : '<br><br><a href="/.auth/logout">Sign out</a>'}</div>`; }
 })();
 </script>
 </body>
