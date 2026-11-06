@@ -34,6 +34,8 @@ module.exports = {
     { code: 'cargo_tags', label: 'Cargo tags', phase: 'OUT' },
     { code: 'collect_cag', label: 'Collect CAG', phase: 'OUT' },
     { code: 'headset', label: 'Connect headset', phase: 'OUT' },
+    { code: 'pull_power', label: 'Pull power', phase: 'OUT' },
+    { code: 'pull_pca', label: 'Pull PCA', phase: 'OUT' },
 ],
 
   LIT: [

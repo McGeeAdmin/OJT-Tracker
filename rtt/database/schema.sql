@@ -21,6 +21,7 @@ CREATE TABLE dbo.ojt_tasklog (
     Flight       NVARCHAR(10)  NULL,
     Tail         NVARCHAR(12)  NULL,
     Notes        NVARCHAR(500) NULL,
+    Proficient   BIT           NOT NULL CONSTRAINT DF_ojt_tasklog_Proficient DEFAULT 0,   -- 1 = trainer marked them proficient at this task
     TrainerEmail NVARCHAR(200) NOT NULL,
     TrainerName  NVARCHAR(120) NOT NULL,
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
@@ -53,6 +54,7 @@ CREATE TABLE dbo.lit_tasklog (
     Flight       NVARCHAR(10)  NULL,
     Tail         NVARCHAR(12)  NULL,
     Notes        NVARCHAR(500) NULL,
+    Proficient   BIT           NOT NULL CONSTRAINT DF_lit_tasklog_Proficient DEFAULT 0,
     TrainerEmail NVARCHAR(200) NOT NULL,
     TrainerName  NVARCHAR(120) NOT NULL,
     CreatedAt    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()

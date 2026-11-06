@@ -19,7 +19,7 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 3. Week 1 or 2 is filled in from the trainee's record, and the trainer can change it.
 4. They choose **Arrival (In)** or **Departure (Out)**. Only that part of the turn's tasks are shown.
 5. They enter the gate, flight number and tail number.
-6. They tap every task the trainee did. Each task button shows how many times this trainee has done it so far.
+6. They tap every task the trainee did. Each task button shows how many times this trainee has done it so far. A selected task shows a **Proficient** checkbox underneath; the trainer ticks it when the trainee can do that task on their own. There's no set number of times required. Once a task is marked proficient it shows **★ Proficient** and the checkbox no longer appears for it.
 7. They add notes if needed and submit.
 
 "Submit and add another trainee on this flight" keeps the flight details filled in for the next trainee on the same turn.
@@ -28,9 +28,9 @@ The app has two parts. On a phone, they're buttons at the bottom of the screen; 
 
 **View submissions** has three views. A switch at the top shows everyone's trainees or only the trainer's own.
 
-- **By trainee:** one trainee's count for every task and when each was last done. Tapping a task lists every time it was done.
+- **By trainee:** one trainee's count for every task, when each was last done, and which tasks they're proficient at (with the date and trainer who first marked it). Tapping a task lists every time it was done.
 - **All submissions:** a feed of submissions, newest first, with filters and a CSV download.
-- **Progress grid:** every trainee as a row and every task as a column, with counts in each cell.
+- **Progress grid:** every trainee as a row and every task as a column, with counts in each cell. Proficient tasks are green with ★, and a Proficient column totals them.
 
 ---
 
@@ -46,7 +46,7 @@ The program dropdown in the header switches between the **OJT tracker** and the 
 |---|---|---|
 | `src/` | Azure Static Web Apps | The web page (`index.html`) and sign-in settings (`staticwebapp.config.json`) |
 | `api/` | Azure Functions, run by Static Web Apps | Reads and saves data, and checks who is signed in |
-| `database/` | Azure SQL Database | `schema.sql` creates all tables for a new install; `2026-10-lit-tables.sql` adds the LIT tables to an existing one |
+| `database/` | Azure SQL Database | `schema.sql` creates all tables for a new install; `2026-10-lit-tables.sql` adds the LIT tables to an existing one; `2026-11-proficient.sql` adds the `Proficient` column to both task logs |
 | — | Microsoft Entra ID | Company sign-in. Only accounts in your tenant can get in |
 
 ### The database
@@ -74,6 +74,7 @@ The program dropdown in the header switches between the **OJT tracker** and the 
 | `Week` | Training week, 1 or 2 |
 | `Gate`, `Flight`, `Tail` | Flight details. A gate is required, plus a flight or tail number |
 | `Notes` | Optional trainer notes |
+| `Proficient` | 1 = the trainer marked the trainee proficient at this task on this submission. A task counts as proficient once any row for it has 1; deleting that submission removes it |
 | `TrainerEmail`, `TrainerName` | Who logged it, taken from their sign-in |
 | `CreatedAt` | When it was saved |
 

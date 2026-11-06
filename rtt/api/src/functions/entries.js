@@ -30,7 +30,7 @@ app.http('entries', {
       const res = await r.query(`
         SELECT TOP (@top) t.Id AS id, t.EntryGroupId AS grp, CONVERT(char(5), t.CreatedAt, 108) AS timeUtc, CONVERT(char(10), t.LogDate, 23) AS date, t.EmployeeId AS eid,
                e.FirstName + ' ' + e.LastName AS trainee, e.FirstName AS first, e.LastName AS last, t.TaskCode AS task, RTRIM(t.Phase) AS io, t.Week AS week,
-               t.Gate AS gate, t.Flight AS flight, t.Tail AS tail, t.Notes AS notes,
+               t.Gate AS gate, t.Flight AS flight, t.Tail AS tail, t.Notes AS notes, t.Proficient AS prof,
                t.TrainerName AS trainer, t.TrainerEmail AS trainerEmail
         FROM ${user.t.log} t JOIN ${user.t.emp} e ON e.EmployeeId = t.EmployeeId
         WHERE ${where.join(' AND ')}
@@ -44,6 +44,8 @@ app.http('entries', {
     // POST: one form submission -> one row per selected task
     const b = await req.json().catch(() => ({}));
     const tasks = Array.isArray(b.tasks) ? [...new Set(b.tasks.map(String))] : [];
+    // Tasks the trainer marked the trainee proficient at on this submission (a subset of tasks)
+    const prof = new Set(Array.isArray(b.proficient) ? b.proficient.map(String) : []);
     const gate = clean(b.gate, 10), flight = clean(b.flight, 10), tail = clean(b.tail, 12);
     if (!isDate(b.date)) return bad('Pick a date.');
     if (!clean(b.employeeId, 20)) return bad('Pick a trainee.');
@@ -56,6 +58,7 @@ app.http('entries', {
 
     const codes = new Set(list.map(t => t.code));
     if (tasks.some(t => !codes.has(t))) return bad('One of the selected tasks is no longer on the list. Reload the page and try again.');
+    if ([...prof].some(t => !tasks.includes(t))) return bad('A task is marked proficient but isn’t selected. Select the task or untick Proficient.');
 
     const emp = await pool.request().input('id', sql.VarChar(20), b.employeeId).input('st', sql.VarChar(5), user.station)
       .query(`SELECT 1 FROM ${user.t.emp} WHERE EmployeeId = @id AND Station = @st`);
@@ -74,16 +77,17 @@ app.http('entries', {
           .input('fl', sql.NVarChar(10), flight && flight.toUpperCase().replace(/^AS/, ''))
           .input('tail', sql.NVarChar(12), tail && tail.toUpperCase())
           .input('n', sql.NVarChar(500), clean(b.notes, 500))
+          .input('pf', sql.Bit, prof.has(task) ? 1 : 0)
           .input('te', sql.NVarChar(200), user.email).input('tn', sql.NVarChar(120), user.name)
-          .query(`INSERT INTO ${user.t.log} (EntryGroupId, LogDate, EmployeeId, TaskCode, Phase, Week, Gate, Flight, Tail, Notes, TrainerEmail, TrainerName)
-                  VALUES (@g, @d, @e, @t, @p, @w, @gate, @fl, @tail, @n, @te, @tn)`);
+          .query(`INSERT INTO ${user.t.log} (EntryGroupId, LogDate, EmployeeId, TaskCode, Phase, Week, Gate, Flight, Tail, Notes, Proficient, TrainerEmail, TrainerName)
+                  VALUES (@g, @d, @e, @t, @p, @w, @gate, @fl, @tail, @n, @pf, @te, @tn)`);
       }
       await tx.commit();
     } catch (err) {
       await tx.rollback();
       throw err;
     }
-    return json(201, { saved: tasks.length, group });
+    return json(201, { saved: tasks.length, proficient: prof.size, group });
   })
 });
 

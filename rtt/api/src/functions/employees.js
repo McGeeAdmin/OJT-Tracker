@@ -117,7 +117,7 @@ app.http('employeeEdit', {
   })
 });
 
-// GET one trainee's full record: counts per task plus every entry
+// GET one trainee's full record: counts per task, proficient tasks, plus every entry
 app.http('employeeSummary', {
   methods: ['GET'], authLevel: 'anonymous', route: 'employees/{id}/summary',
   handler: secured(async (req, ctx, user) => {
@@ -128,13 +128,20 @@ app.http('employeeSummary', {
     if (!e.recordset.length) return json(404, { error: 'No trainee has that ID.' });
     const rows = await pool.request().input('id', sql.VarChar(20), id).query(`
       SELECT Id AS id, CONVERT(char(10), LogDate, 23) AS date, TaskCode AS task, RTRIM(Phase) AS io, Week AS week,
-             Gate AS gate, Flight AS flight, Tail AS tail, Notes AS notes, TrainerName AS trainer, TrainerEmail AS trainerEmail
+             Gate AS gate, Flight AS flight, Tail AS tail, Notes AS notes, Proficient AS prof, TrainerName AS trainer, TrainerEmail AS trainerEmail
       FROM ${user.t.log} WHERE EmployeeId=@id ORDER BY LogDate DESC, Id DESC`);
     const recs = rows.recordset, counts = {};
     recs.forEach(r => { counts[r.task] = (counts[r.task] || 0) + 1; });
+    // A task is proficient once any submission marked it. Keep the first time (records are newest first, so walk from the end).
+    const proficient = {};
+    for (let i = recs.length - 1; i >= 0; i--) {
+      const r = recs[i];
+      if (r.prof && !proficient[r.task]) proficient[r.task] = { date: r.date, trainer: r.trainer };
+    }
     return json(200, {
       employee: e.recordset[0],
       counts,
+      proficient,
       records: recs,
       latestWeek: recs.length ? recs[0].week : null,
       firstDate: recs.length ? recs[recs.length - 1].date : null,
